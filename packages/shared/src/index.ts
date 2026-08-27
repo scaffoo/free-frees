@@ -66,74 +66,101 @@ export const roomViewSchema = publicRoomSchema.extend({
 });
 export type RoomView = z.infer<typeof roomViewSchema>;
 
-const primitiveArgSchema: z.ZodType<unknown> = z.lazy(() =>
-  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(primitiveArgSchema), z.record(primitiveArgSchema)])
-);
+const literalSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const jsonValueSchema: z.ZodType<unknown> = z.lazy(() => z.union([literalSchema, z.array(jsonValueSchema), z.record(jsonValueSchema)]));
 
-export const gamePrimitiveSchema = z.object({
-  op: z.string(),
-  args: z.record(primitiveArgSchema).default({})
+export const predicateSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.object({ all: z.array(predicateSchema) }),
+    z.object({ any: z.array(predicateSchema) }),
+    z.object({ not: predicateSchema }),
+    z.object({ equals: z.tuple([z.string(), jsonValueSchema]) }),
+    z.object({ notEquals: z.tuple([z.string(), jsonValueSchema]) }),
+    z.object({ greaterThan: z.tuple([z.string(), jsonValueSchema]) }),
+    z.object({ greaterThanOrEqual: z.tuple([z.string(), jsonValueSchema]) }),
+    z.object({ lessThan: z.tuple([z.string(), jsonValueSchema]) }),
+    z.object({ lessThanOrEqual: z.tuple([z.string(), jsonValueSchema]) }),
+    z.object({ in: z.tuple([z.string(), z.union([z.string(), z.array(jsonValueSchema)])]) })
+  ])
+);
+export type Predicate = z.infer<typeof predicateSchema>;
+
+export const gameCardValueSchema = z.object({
+  name: z.string(),
+  value: z.number().int(),
+  rank: z.number().int()
 });
-export type GamePrimitive = z.infer<typeof gamePrimitiveSchema>;
 
 export const gameZoneDefinitionSchema = z.object({
-  id: idSchema,
-  kind: zoneSchema.shape.kind,
-  visibility: zoneSchema.shape.visibility,
-  owner: z.enum(["none", "player", "seat"]).default("none"),
-  count: z.number().int().positive().optional(),
-  labels: z.array(z.string()).optional()
+  label: idSchema,
+  attributes: z.record(jsonValueSchema).default({})
 });
 export type GameZoneDefinition = z.infer<typeof gameZoneDefinitionSchema>;
+
+export const zoneTransferActionSchema = z.object({
+  source: z.string(),
+  destination: z.string(),
+  count: z.union([z.number().int().positive(), z.string()]),
+  order: z.enum(["Preserve", "Reverse"]).default("Preserve")
+});
+
+export const communicateActionSchema = z.object({
+  source: z.union([z.number().int(), z.string()]),
+  destination: z.union([z.number().int(), z.string()]),
+  verb: z.string(),
+  value: z.union([z.string(), z.number().int(), z.null()]).optional()
+});
+
+export const ruleEffectSchema = z.object({
+  op: z.string(),
+  args: z.record(jsonValueSchema).default({})
+});
+export type RuleEffect = z.infer<typeof ruleEffectSchema>;
+
+export const gameRuleSchema = z.object({
+  name: idSchema,
+  automatic: z.boolean().default(false),
+  predicate: predicateSchema,
+  action: z.union([
+    z.object({ zoneTransfer: zoneTransferActionSchema }),
+    z.object({ communicate: communicateActionSchema })
+  ]),
+  effects: z.array(ruleEffectSchema).default([])
+});
+export type GameRule = z.infer<typeof gameRuleSchema>;
 
 export const gameDefinitionSchema = z.object({
   id: idSchema,
   version: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  minPlayers: z.number().int().positive(),
-  maxPlayers: z.number().int().positive(),
-  engine: z.object({
-    runtime: z.string(),
-    languageVersion: z.literal("0.1")
+  engine: z.object({ runtime: z.literal("genericCardGame"), languageVersion: z.literal("0.2") }),
+  players: z.object({
+    count: z.number().int().positive(),
+    players: z.array(z.object({ id: z.number().int().nonnegative(), type: z.enum(["Human", "Bot", "Null"]) }))
   }),
-  deck: z.object({
-    type: z.enum(["standard-52", "custom"]),
-    includeJokers: z.boolean().default(false),
-    ranks: z.array(z.string()).optional(),
-    suits: z.array(z.string()).optional(),
-    cards: z.array(z.record(primitiveArgSchema)).optional()
+  cards: z.object({
+    count: z.number().int().positive(),
+    decks: z.number().int().positive(),
+    suits: z.array(z.string()),
+    values: z.array(gameCardValueSchema)
   }),
   zones: z.array(gameZoneDefinitionSchema),
-  setup: z.array(gamePrimitiveSchema).default([]),
-  turn: z.object({
-    mode: z.enum(["solitaire", "clockwise", "none"]),
-    phases: z.array(
-      z.object({
-        id: idSchema,
-        player: z.enum(["none", "current", "owner"]).default("current"),
-        choices: z.array(idSchema).default([]),
-        automatic: z.array(gamePrimitiveSchema).default([])
-      })
-    )
+  actions: z.object({
+    zoneTransfer: z.object({ parameters: z.array(z.string()), semantics: z.record(jsonValueSchema).default({}) }),
+    communicate: z.object({ parameters: z.array(z.string()), semantics: z.record(jsonValueSchema).default({}) })
   }),
-  actions: z.array(
-    z.object({
-      id: idSchema,
-      label: z.string(),
-      input: z.array(z.object({ id: idSchema, kind: z.enum(["card", "zone", "rank", "player", "count"]) })).default([]),
-      legal: z.array(gamePrimitiveSchema).default([]),
-      effect: z.array(gamePrimitiveSchema).default([])
-    })
-  ).default([]),
-  scoring: z.array(gamePrimitiveSchema).default([]),
-  endConditions: z.array(
-    z.object({
-      id: idSchema,
-      when: z.array(gamePrimitiveSchema),
-      result: z.array(gamePrimitiveSchema)
-    })
-  ).default([]),
+  initialState: z.object({
+    stateType: z.string(),
+    variables: z.record(jsonValueSchema).default({}),
+    actor: z.number().int().nonnegative(),
+    zones: z.record(z.number().int().nonnegative()),
+    distribution: z.object({ random: z.boolean().default(true) }).default({ random: true })
+  }),
+  stateTypes: z.record(z.object({ predicate: predicateSchema.optional() })).default({}),
+  rules: z.array(gameRuleSchema),
+  turn: z.object({ actor: z.union([z.number().int().nonnegative(), z.string()]), minimumActions: z.number().int().nonnegative(), maximumActions: z.number().int().positive().nullable() }),
+  ruleEvaluation: z.object({ default: z.literal("Deny"), applicableRules: z.literal("Derived") }),
   bot: z.object({ strategy: z.enum(["none", "random-legal"]) }).default({ strategy: "none" })
 });
 export type DeclarativeGameDefinition = z.infer<typeof gameDefinitionSchema>;

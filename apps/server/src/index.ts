@@ -88,7 +88,7 @@ app.get("/rooms", async () => ({ rooms: await listRooms() }));
 app.post("/rooms", async (request) => {
   const user = await requireUser(request);
   const input = createRoomSchema.parse(request.body);
-  const room = await createRoom({ gameId: input.gameId as "klondike-draw-3" | "go-fish-2p", name: input.name, ownerUserId: user.id, ownerName: user.name, botCount: input.botCount });
+  const room = await createRoom({ gameId: input.gameId, name: input.name, ownerUserId: user.id, ownerName: user.name, botCount: input.botCount });
   io.to(room.id).emit("room:update", room);
   return { room };
 });

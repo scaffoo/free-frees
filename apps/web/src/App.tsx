@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut, Plus, Spade } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "./lib/api";
 
@@ -12,7 +12,7 @@ export function App() {
   const rooms = useQuery({ queryKey: ["rooms"], queryFn: api.rooms, refetchInterval: 3000 });
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [auth, setAuth] = useState({ email: "", name: "", password: "" });
-  const [gameId, setGameId] = useState("klondike-draw-3");
+  const [gameId, setGameId] = useState("");
   const [botCount, setBotCount] = useState(0);
   const [roomName, setRoomName] = useState("Table 1");
 
@@ -27,6 +27,14 @@ export function App() {
       navigate(`/rooms/${room.id}`);
     }
   });
+  const selectedGame = games.data?.games.find((game) => game.id === gameId);
+  const supportsBot = Boolean(selectedGame && selectedGame.players.count > 1);
+
+  useEffect(() => {
+    const availableGames = games.data?.games ?? [];
+    const firstGame = availableGames[0];
+    if (firstGame && !availableGames.some((game) => game.id === gameId)) setGameId(firstGame.id);
+  }, [gameId, games.data]);
 
   if (!me.data?.user) {
     return (
@@ -64,10 +72,14 @@ export function App() {
         <form className="rounded-lg border bg-white p-4" onSubmit={(event) => { event.preventDefault(); createMutation.mutate(); }}>
           <h2 className="mb-4 text-xl font-bold">Create Room</h2>
           <input className="mb-3 w-full rounded border px-3 py-2" value={roomName} onChange={(event) => setRoomName(event.target.value)} />
-          <select className="mb-3 w-full rounded border px-3 py-2" value={gameId} onChange={(event) => { setGameId(event.target.value); setBotCount(event.target.value === "go-fish-2p" ? 1 : 0); }}>
+          <select className="mb-3 w-full rounded border px-3 py-2" value={gameId} onChange={(event) => {
+            const nextGame = games.data?.games.find((game) => game.id === event.target.value);
+            setGameId(event.target.value);
+            setBotCount(nextGame && nextGame.players.count > 1 ? 1 : 0);
+          }}>
             {games.data?.games.map((game) => <option key={game.id} value={game.id}>{game.name}</option>)}
           </select>
-          {gameId === "go-fish-2p" && (
+          {supportsBot && (
             <label className="mb-4 flex items-center gap-2">
               <input type="checkbox" checked={botCount === 1} onChange={(event) => setBotCount(event.target.checked ? 1 : 0)} />
               Add random bot

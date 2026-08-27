@@ -1,0 +1,466 @@
+GENERIC TRADITIONAL CARD GAME MODEL
+
+The engine is intended to support traditional playing-card games entirely from data definitions. A game definition should not contain executable game-specific code. The engine evaluates the game definition, current Game State, and Rules to determine which Actions are permitted.
+
+The fundamental principle is DENY BY DEFAULT:
+An Action is illegal unless a Rule explicitly permits it.
+
+==================================================
+CARD
+==================================================
+
+Card represents one standard playing card.
+
+Properties:
+
+  Suit
+    Hearts
+    Diamonds
+    Clubs
+    Spades
+
+  Value
+    Numeric intrinsic value of the card:
+    Ace = 1
+    2 = 2
+    ...
+    Jack = 11
+    Queen = 12
+    King = 13
+
+  Rank
+    Numeric game-specific ordering/precedence.
+
+Color may be derived from Suit:
+  Hearts/Diamonds = Red
+  Clubs/Spades = Black
+
+A Game contains 1...N standard playing cards, allowing multiple decks if necessary.
+
+
+==================================================
+PLAYER
+==================================================
+
+Player represents a participant or communication endpoint.
+
+Types:
+
+  Human
+  Bot
+  Null
+
+Player 0 may be the Null player.
+
+Null allows an Action such as a declaration to be directed to the game rather than another actual player.
+
+
+==================================================
+ZONE
+==================================================
+
+Zone is a collection of Cards.
+
+A game may define as many Zones as necessary. Granular Zones are encouraged because many card-game state distinctions can be represented simply by placing cards in different Zones.
+
+Examples:
+
+  Draw pile
+  Discard pile
+  Player hand
+  Tableau
+  Foundation
+  Trick
+  Face-up portion of tableau
+  Face-down portion of tableau
+  Player-specific meld
+
+A Zone has:
+
+  Label
+    Unique identifier for the Zone.
+
+  Attributes
+    0...N arbitrary name/value attributes.
+
+  Cards
+    Ordered collection of Cards currently in the Zone.
+
+Zone attributes are NOT restricted to a fixed schema.
+
+Games will commonly use attributes such as:
+
+  Type
+    Tableau
+    Draw
+    Discard
+    Foundation
+    Hand
+    etc.
+
+  Visibility
+    Hidden
+    Public
+    Player
+
+  Player
+    Player associated with a Player-visible Zone.
+
+  Column
+    Logical column/position.
+
+  Suit
+    Useful for suit-specific foundation Zones.
+
+However, these are conventions rather than hard-coded limitations of Zone.
+
+Example:
+
+  T3-Up
+    Type = Tableau
+    Visibility = Public
+    Column = 3
+
+  T3-Down
+    Type = Tableau
+    Visibility = Hidden
+    Column = 3
+
+  F1-Hearts
+    Type = Foundation
+    Visibility = Public
+    Suit = Hearts
+
+Visibility is therefore represented by Zone membership rather than by a FaceUp/FaceDown property on Card.
+
+
+==================================================
+ACTION
+==================================================
+
+There are two foundational Action types:
+
+  ZoneTransfer
+  Communicate
+
+
+--------------------------------------------------
+ZoneTransfer
+--------------------------------------------------
+
+Represents movement of Cards between Zones.
+
+Parameters:
+
+  Source
+    Zone
+
+  Destination
+    Zone
+
+  Count
+    Number of Cards being transferred.
+
+Source and Destination are built-in parameters bound to the Zones participating in the proposed Action.
+
+Conceptually:
+
+  ZoneTransfer(Source, Destination, Count)
+
+Most traditional card-game actions reduce to ZoneTransfer:
+
+  draw
+  discard
+  deal
+  play
+  capture
+  meld
+  pass cards
+  reveal/turn over a card
+
+For example, if face-up and face-down tableau cards occupy different Zones, turning over a card is simply:
+
+  ZoneTransfer(T3-Down, T3-Up, 1)
+
+The engine should not require separate foundational Draw, Discard, Deal, Reveal, Play, etc. Actions.
+
+
+--------------------------------------------------
+Communicate
+--------------------------------------------------
+
+Represents a player communication/declaration that can affect Game State.
+
+Parameters:
+
+  Source
+    Player
+
+  Destination
+    Player
+
+  Verb
+    Game-defined communication identifier.
+
+  Value
+    Optional associated value.
+
+Conceptually:
+
+  Communicate(Source, Destination, Verb, Value)
+
+Examples:
+
+  Communicate(P1, P2, Bid, 4)
+  Communicate(P1, P0, Fold)
+  Communicate(P1, P0, DeclareTrump, Hearts)
+
+Verb is NOT a fixed enumeration. Individual games may define whatever communication verbs they require.
+
+Player 0 (Null) is used when communication is directed to the game rather than another player.
+
+
+==================================================
+TURN
+==================================================
+
+A Turn consists of 1...N Actions made by a single Player.
+
+Only one Player is the Actor at a time.
+
+The number and types of Actions permitted during a Turn are determined by Rules, not by hard-coded engine behavior.
+
+
+==================================================
+GAME STATE
+==================================================
+
+Game State completely describes the current state of a game.
+
+It contains:
+
+  State Type
+  Variables
+  Actor
+  Cards in Zones
+  Applicable Rules
+
+
+--------------------------------------------------
+State Type
+--------------------------------------------------
+
+First-class state property.
+
+Values:
+
+  Initial
+  InPlay
+  Completion
+
+Every game progresses from an Initial state through InPlay and eventually to Completion.
+
+
+--------------------------------------------------
+Variables
+--------------------------------------------------
+
+0...N game-specific state values that cannot or should not be represented by card placement in Zones.
+
+Examples:
+
+  Current Score
+  Current Hand Number
+  Current Round Number
+  Current Bid
+  Trump Suit
+  Phase
+
+Variables are game-defined rather than hard-coded into the engine.
+
+
+--------------------------------------------------
+Actor
+--------------------------------------------------
+
+The Player whose Turn it currently is.
+
+Player is the participant.
+
+Actor is the Player currently authorized to act.
+
+
+--------------------------------------------------
+Cards in Zones
+--------------------------------------------------
+
+The location and ordering of all Cards across all defined Zones.
+
+Much of Game State should be represented through Zone membership rather than Variables whenever practical.
+
+
+--------------------------------------------------
+Applicable Rules
+--------------------------------------------------
+
+The subset of the complete Game Rules that apply to the current Game State.
+
+Applicable Rules are derived, not independently stored authoritative state.
+
+
+==================================================
+RULE
+==================================================
+
+A Rule defines when an Action is permitted.
+
+Rules follow the fundamental form:
+
+  Predicate => Action
+
+For example:
+
+  D1.Count >= 3
+    =>
+  ZoneTransfer(D1, C1, 3)
+
+The engine uses DENY BY DEFAULT.
+
+Therefore:
+
+  If no Rule permits a proposed Action, the Action is illegal.
+
+A Rule predicate may examine:
+
+  Game State
+  State Type
+  Variables
+  Actor
+  Source Zone
+  Destination Zone
+  Zone attributes
+  Zone card count
+  Cards within Zones
+  Card Suit
+  Card Value
+  Card Rank
+  derived Card Color
+  parameters of the proposed Action
+
+Rules should generally operate on Zone attributes rather than specific Zone labels when possible.
+
+For example, a generic Klondike tableau rule should be conceptually:
+
+  Source.Type = Tableau
+  AND Source.Visibility = Public
+  AND Destination.Type = Tableau
+  AND Destination.Visibility = Public
+  AND appropriate rank/color relationship
+    =>
+  ZoneTransfer(Source, Destination, Count)
+
+This allows one Rule to govern transfers among T1-Up through T7-Up rather than defining rules for every pair of Zones.
+
+
+==================================================
+GAME
+==================================================
+
+A Game Definition contains:
+
+  Cards
+    Number of standard playing cards/decks.
+
+  Players
+    Number and types of Players.
+
+  Zones
+    1...N Zone definitions and their Attributes.
+
+  Variables
+    Definitions of game-specific Variables, if any.
+
+  Initial State
+    Initial State Type.
+    Initial Actor.
+    Initial Variable values.
+    Initial distribution of Cards among Zones.
+
+  Rules
+    Complete set of Predicate => Action permission Rules.
+
+  Completion
+    Predicate determining when State Type becomes Completion.
+
+
+==================================================
+CORE ENGINE MODEL
+==================================================
+
+The minimal conceptual model is therefore:
+
+  Card
+  Player
+  Zone
+
+  Action
+    ZoneTransfer
+    Communicate
+
+  Turn
+
+  Rule
+    Predicate => Action
+
+  GameState
+    StateType
+    Variables
+    Actor
+    Zones
+    ApplicableRules
+
+  Game
+    Cards
+    Players
+    Zones
+    InitialState
+    Rules
+    Completion
+
+
+==================================================
+CORE PRINCIPLE
+==================================================
+
+Traditional card games can largely be modeled as:
+
+  Cards moving between arbitrarily granular Zones,
+  plus player communications,
+  constrained by predicates over Game State.
+
+The engine should remain generic.
+
+Game-specific concepts such as:
+
+  draw
+  discard
+  foundation
+  tableau
+  meld
+  trick
+  bid
+  fold
+  run
+  group
+
+should NOT automatically become engine primitives.
+
+They should be represented through:
+
+  Zone attributes
+  ZoneTransfer
+  Communicate
+  Variables
+  Rules
+
+unless a future game demonstrates that an additional foundational concept is actually necessary.

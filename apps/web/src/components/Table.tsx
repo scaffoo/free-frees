@@ -9,29 +9,24 @@ type TableProps = {
   onMove: (moveId: string) => void;
 };
 
-type DragSource = {
-  zone: string;
-  index?: number;
-  cardIndex?: number;
-  isTop?: boolean;
+type ZoneView = {
+  label: string;
+  attributes: Record<string, unknown>;
+  cards: Card[];
 };
 
-type StateRecord = Record<string, unknown>;
+type DragSource = {
+  zone: string;
+  count: number;
+};
 
-function asRecord(value: unknown): StateRecord {
-  return value && typeof value === "object" ? value as StateRecord : {};
-}
-
-function cards(value: unknown): Card[] {
-  return Array.isArray(value) ? value as Card[] : [];
-}
-
-function cardMatrix(value: unknown): Card[][] {
-  return Array.isArray(value) ? value as Card[][] : [];
+function stateZones(room: RoomView): Record<string, ZoneView> {
+  const state = room.state as { zones?: Record<string, ZoneView> };
+  return state?.zones ?? {};
 }
 
 function movePayload(move: LegalMove) {
-  return move.payload as { from?: string; to?: string; start?: number };
+  return move.payload as { from?: string; to?: string; count?: number };
 }
 
 function readDrag(event: DragEvent): DragSource | undefined {
@@ -44,44 +39,41 @@ function startDrag(event: DragEvent, source: DragSource) {
   event.dataTransfer.setData("application/free-frees-card", JSON.stringify(source));
 }
 
-function moveForDrop(moves: LegalMove[], source: DragSource, target: string) {
-  return moves.find((move) => {
+function movesFrom(moves: LegalMove[], source: DragSource) {
+  return moves.filter((move) => {
     const payload = movePayload(move);
-    if (payload.to !== target) return false;
-    if (source.zone === "waste") return payload.from === "waste";
-    if (source.zone === "tableau") {
-      return (
-        payload.from === `tableau-${source.index}` &&
-        (payload.start === source.cardIndex || (source.isTop && move.id.startsWith(`tableau-${source.index}-to-foundation-`)))
-      );
-    }
-    return payload.from === source.zone;
+    return payload.from === source.zone && payload.count === source.count;
   });
+}
+
+function moveForDrop(moves: LegalMove[], source: DragSource, target: string) {
+  return movesFrom(moves, source).find((move) => movePayload(move).to === target);
 }
 
 function sourceKey(source: DragSource) {
-  return `${source.zone}:${source.index ?? ""}:${source.cardIndex ?? ""}`;
+  return `${source.zone}:${source.count}`;
 }
 
-function sourceMoves(moves: LegalMove[], source: DragSource) {
-  return moves.filter((move) => {
-    const payload = movePayload(move);
-    if (source.zone === "waste") return payload.from === "waste";
-    if (source.zone === "tableau") {
-      return (
-        move.id.startsWith(`tableau-${source.index}-${source.cardIndex}-`) ||
-        (source.isTop && move.id.startsWith(`tableau-${source.index}-to-foundation-`)) ||
-        (payload.from === `tableau-${source.index}` && payload.start === source.cardIndex)
-      );
-    }
-    return payload.from === source.zone;
-  });
+function zoneType(zone: ZoneView) {
+  return String(zone.attributes.type ?? "Zone");
 }
 
-function DropPile({ target, children, onMove, moves }: { target: string; children: ReactNode; onMove: (moveId: string) => void; moves: LegalMove[] }) {
+function zoneVisibility(zone: ZoneView) {
+  return String(zone.attributes.visibility ?? "Public");
+}
+
+function groupBy<T>(items: T[], key: (item: T) => string) {
+  return items.reduce<Record<string, T[]>>((groups, item) => {
+    const group = key(item);
+    groups[group] = [...(groups[group] ?? []), item];
+    return groups;
+  }, {});
+}
+
+function DropTarget({ target, moves, onMove, children, className = "" }: { target: string; moves: LegalMove[]; onMove: (moveId: string) => void; children: ReactNode; className?: string }) {
   return (
     <button
-      className="rounded focus:outline-none focus:ring-2 focus:ring-white"
+      className={`rounded focus:outline-none focus:ring-2 focus:ring-white ${className}`}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -90,7 +82,7 @@ function DropPile({ target, children, onMove, moves }: { target: string; childre
         if (move) onMove(move.id);
       }}
       onClick={() => {
-        const move = moves.find((candidate) => movePayload(candidate).to === target || candidate.id.endsWith(target));
+        const move = moves.find((candidate) => movePayload(candidate).to === target);
         if (move) onMove(move.id);
       }}
     >
@@ -99,11 +91,11 @@ function DropPile({ target, children, onMove, moves }: { target: string; childre
   );
 }
 
-function CardButton({ card, source, moves, onSourceMove, stackOffset = false }: { card: Card; source: DragSource; moves: LegalMove[]; onSourceMove: (source: DragSource, moves: LegalMove[]) => void; stackOffset?: boolean }) {
+function StackCard({ card, source, moves, onSourceMove, offset }: { card: Card; source: DragSource; moves: LegalMove[]; onSourceMove: (source: DragSource, moves: LegalMove[]) => void; offset: boolean }) {
   return (
     <button
       className="block rounded focus:outline-none focus:ring-2 focus:ring-white disabled:cursor-default"
-      style={{ marginTop: stackOffset ? -48 : 0 }}
+      style={{ marginTop: offset ? -48 : 0 }}
       draggable={moves.length > 0}
       disabled={moves.length === 0}
       onDragStart={(event) => startDrag(event, source)}
@@ -115,103 +107,84 @@ function CardButton({ card, source, moves, onSourceMove, stackOffset = false }: 
   );
 }
 
-function PileZone({ id, pile, moves, onMove }: { id: string; pile: Card[]; moves: LegalMove[]; onMove: (moveId: string) => void }) {
-  const top = pile[pile.length - 1];
-  const source = { zone: id };
-  const availableMoves = top ? sourceMoves(moves, source) : [];
+function Pile({ zone, moves, onMove, onSourceMove }: { zone: ZoneView; moves: LegalMove[]; onMove: (moveId: string) => void; onSourceMove: (source: DragSource, moves: LegalMove[]) => void }) {
+  const top = zone.cards[zone.cards.length - 1];
+  const source = { zone: zone.label, count: 1 };
+  const available = top ? movesFrom(moves, source) : [];
   return (
-    <DropPile target={id} moves={moves} onMove={onMove}>
+    <DropTarget target={zone.label} moves={moves} onMove={onMove}>
       {top ? (
-        <span draggable={availableMoves.length > 0} onDragStart={(event) => startDrag(event, source)}>
+        <span draggable={available.length > 0} onDragStart={(event) => startDrag(event, source)} onClick={() => onSourceMove(source, available)}>
           <CardView card={top} />
         </span>
       ) : (
         <CardView />
       )}
-    </DropPile>
+    </DropTarget>
   );
 }
 
-function TableauZone({ columns, moves, onMove, onSourceMove }: { columns: Card[][]; moves: LegalMove[]; onMove: (moveId: string) => void; onSourceMove: (source: DragSource, moves: LegalMove[]) => void }) {
+function TableauColumns({ zones, moves, onMove, onSourceMove }: { zones: ZoneView[]; moves: LegalMove[]; onMove: (moveId: string) => void; onSourceMove: (source: DragSource, moves: LegalMove[]) => void }) {
+  const byColumn = groupBy(zones, (zone) => String(zone.attributes.column ?? zone.label));
   return (
     <div className="grid grid-cols-7 gap-2 md:gap-4">
-      {columns.map((column, columnIndex) => (
-        <div
-          key={columnIndex}
-          className="min-h-64 rounded-md p-1 transition-colors hover:bg-white/5"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            const source = readDrag(event);
-            const move = source ? moveForDrop(moves, source, `tableau-${columnIndex}`) : undefined;
-            if (move) onMove(move.id);
-          }}
-        >
-          {column.map((card, cardIndex) => {
-            const source = { zone: "tableau", index: columnIndex, cardIndex, isTop: cardIndex === column.length - 1 };
-            return <CardButton key={card.id} card={card} source={source} moves={sourceMoves(moves, source)} onSourceMove={onSourceMove} stackOffset={cardIndex > 0} />;
-          })}
-        </div>
-      ))}
+      {Object.entries(byColumn).sort(([a], [b]) => Number(a) - Number(b)).map(([column, columnZones]) => {
+        const hidden = columnZones.find((zone) => zoneVisibility(zone) === "Hidden");
+        const visible = columnZones.find((zone) => zoneVisibility(zone) !== "Hidden") ?? columnZones[0];
+        return (
+          <DropTarget key={column} target={visible.label} moves={moves} onMove={onMove} className="min-h-64 p-1 text-left transition-colors hover:bg-white/5">
+            <div>
+              {(hidden?.cards ?? []).map((card, index) => <div key={card.id} style={{ marginTop: index === 0 ? 0 : -48 }}><CardView card={card} /></div>)}
+              {visible.cards.map((card, index) => {
+                const count = visible.cards.length - index;
+                const source = { zone: visible.label, count };
+                return <StackCard key={card.id} card={card} source={source} moves={movesFrom(moves, source)} onSourceMove={onSourceMove} offset={(hidden?.cards.length ?? 0) > 0 || index > 0} />;
+              })}
+              {visible.cards.length === 0 && (hidden?.cards.length ?? 0) === 0 ? <CardView /> : null}
+            </div>
+          </DropTarget>
+        );
+      })}
     </div>
   );
 }
 
-function PlayerZones({ room, state, onMove }: { room: RoomView; state: StateRecord; onMove: (moveId: string) => void }) {
-  const hands = asRecord(state.hands);
-  const books = asRecord(state.books);
-  const currentPlayerId = typeof state.currentPlayerId === "string" ? state.currentPlayerId : undefined;
+function PlayerPanels({ zones }: { zones: ZoneView[] }) {
+  const byPlayer = groupBy(zones.filter((zone) => zone.attributes.player !== undefined), (zone) => String(zone.attributes.player));
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {room.players.map((player) => (
-        <section key={player.id} className="rounded-lg bg-black/20 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-bold">{player.name}{player.id === currentPlayerId ? " · Turn" : ""}</h2>
-            <div className="text-sm">{Array.isArray(books[player.id]) ? (books[player.id] as string[]).length : 0} books</div>
-          </div>
-          <div className="mb-4 flex min-h-20 flex-wrap gap-2">
-            {cards(hands[player.id]).map((card) => <CardView key={card.id} card={card} compact />)}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(Array.isArray(books[player.id]) ? books[player.id] as string[] : []).map((rank) => (
-              <span key={rank} className="rounded bg-white px-2 py-1 text-sm font-bold text-ink">{rank} book</span>
-            ))}
-          </div>
+      {Object.entries(byPlayer).map(([player, playerZones]) => (
+        <section key={player} className="rounded-lg bg-black/20 p-4">
+          <h2 className="mb-3 font-bold">Player {player}</h2>
+          {playerZones.map((zone) => (
+            <div key={zone.label} className="mb-3">
+              <div className="mb-2 text-sm text-white/70">{zone.label}</div>
+              <div className="flex min-h-16 flex-wrap gap-2">
+                {zone.cards.map((card) => <CardView key={card.id} card={card} compact />)}
+              </div>
+            </div>
+          ))}
         </section>
       ))}
     </div>
   );
 }
 
-function ActionBar({ moves, onMove }: { moves: LegalMove[]; onMove: (moveId: string) => void }) {
-  const actions = moves.filter((move) => !movePayload(move).from && !movePayload(move).to);
+function CommunicationActions({ moves, onMove }: { moves: LegalMove[]; onMove: (moveId: string) => void }) {
+  const communicationMoves = moves.filter((move) => move.type === "communicate");
+  if (communicationMoves.length === 0) return null;
   return (
     <section className="rounded-lg bg-black/20 p-4">
       <div className="flex flex-wrap gap-2">
-        {moves.length === 0 && <span className="text-sm text-white/70">Waiting for an available action.</span>}
-        {actions.map((move) => (
-          <button key={move.id} className="rounded bg-white px-3 py-2 text-sm font-semibold text-ink" onClick={() => onMove(move.id)}>{move.label}</button>
-        ))}
-        {actions.length === 0 && moves.map((move) => (
-          <button key={move.id} className="rounded bg-white px-3 py-2 text-sm font-semibold text-ink" onClick={() => onMove(move.id)}>{move.label}</button>
-        ))}
+        {communicationMoves.map((move) => <button key={move.id} className="rounded bg-white px-3 py-2 text-sm font-semibold text-ink" onClick={() => onMove(move.id)}>{move.label}</button>)}
       </div>
     </section>
   );
 }
 
-export function Table({ definition, room, onMove }: TableProps) {
+export function Table({ definition: _definition, room, onMove }: TableProps) {
   const [clickCycle, setClickCycle] = useState<Record<string, number>>({});
-  const state = asRecord(room.state);
-  const hasHands = Boolean(state.hands);
-  const stock = cards(state.stock);
-  const waste = cards(state.waste);
-  const foundations = asRecord(state.foundations);
-  const tableau = cardMatrix(state.tableau);
-  const foundationZone = definition.zones.find((zone) => zone.kind === "foundation");
-  const foundationLabels = foundationZone?.labels ?? Object.keys(foundations);
-  const stockAction = room.legalMoves.find((move) => move.id === "draw-stock" || move.id === "recycle-waste");
-  const wasteTop = waste[waste.length - 1];
+  const zones = Object.values(stateZones(room));
   const onSourceMove = (source: DragSource, moves: LegalMove[]) => {
     if (moves.length === 0) return;
     const key = sourceKey(source);
@@ -220,35 +193,27 @@ export function Table({ definition, room, onMove }: TableProps) {
     setClickCycle((current) => ({ ...current, [key]: index + 1 }));
   };
 
+  const drawZones = zones.filter((zone) => zoneType(zone) === "Draw");
+  const discardZones = zones.filter((zone) => zoneType(zone) === "Discard");
+  const foundationZones = zones.filter((zone) => zoneType(zone) === "Foundation");
+  const tableauZones = zones.filter((zone) => zoneType(zone) === "Tableau");
+  const playerZones = zones.filter((zone) => ["Hand", "Book", "Meld"].includes(zoneType(zone)));
+  const otherZones = zones.filter((zone) => !["Draw", "Discard", "Foundation", "Tableau", "Hand", "Book", "Meld"].includes(zoneType(zone)));
+
   return (
     <div className="min-h-[calc(100vh-72px)] bg-felt p-4 text-white">
       <div className="mx-auto grid max-w-7xl gap-5">
-        {hasHands ? <PlayerZones room={room} state={state} onMove={onMove} /> : null}
-
+        {playerZones.length > 0 ? <PlayerPanels zones={playerZones} /> : null}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          {definition.zones.some((zone) => zone.kind === "stock" || zone.kind === "waste") && (
-            <div className="flex gap-3">
-              <button className="rounded focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" disabled={!stockAction} onClick={() => stockAction && onMove(stockAction.id)} title={stockAction?.label ?? "No stock action"}>
-                <CardView card={stock.length ? { id: "stock", rank: "?", suit: "hidden", value: 0, faceUp: false } : undefined} />
-              </button>
-              <div className="flex -space-x-8">
-                {waste.slice(-3).map((card) => {
-                  const source = { zone: "waste", isTop: card.id === wasteTop?.id };
-                  return <CardButton key={card.id} card={card} source={source} moves={card.id === wasteTop?.id ? sourceMoves(room.legalMoves, source) : []} onSourceMove={onSourceMove} />;
-                })}
-              </div>
-            </div>
-          )}
-
-          {foundationLabels.length > 0 && (
-            <div className="grid grid-cols-4 gap-3">
-              {foundationLabels.map((label) => <PileZone key={label} id={`foundation-${label}`} pile={cards(foundations[label])} moves={room.legalMoves} onMove={onMove} />)}
-            </div>
-          )}
+          <div className="flex gap-3">
+            {[...drawZones, ...discardZones, ...otherZones].map((zone) => <Pile key={zone.label} zone={zone} moves={room.legalMoves} onMove={onMove} onSourceMove={onSourceMove} />)}
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {foundationZones.map((zone) => <Pile key={zone.label} zone={zone} moves={room.legalMoves} onMove={onMove} onSourceMove={onSourceMove} />)}
+          </div>
         </div>
-
-        {tableau.length > 0 && <TableauZone columns={tableau} moves={room.legalMoves} onMove={onMove} onSourceMove={onSourceMove} />}
-        <ActionBar moves={room.legalMoves} onMove={onMove} />
+        {tableauZones.length > 0 ? <TableauColumns zones={tableauZones} moves={room.legalMoves} onMove={onMove} onSourceMove={onSourceMove} /> : null}
+        <CommunicationActions moves={room.legalMoves} onMove={onMove} />
       </div>
     </div>
   );

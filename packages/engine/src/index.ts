@@ -1,25 +1,15 @@
 import { nanoid } from "nanoid";
 import type { LegalMove, Player } from "@free-frees/shared";
 import { compileDefinitions } from "./definitions/index.js";
-import { goFishRuntime } from "./games/gofish.js";
-import { klondikeRuntime } from "./games/klondike.js";
+import { createGenericRuntime } from "./games/genericCardGame.js";
 import type { EngineGameId, EngineRoom, RuntimeGame } from "./games/types.js";
-export type { EngineEvent, EngineRoom, GoFishState, KlondikeState } from "./games/types.js";
+export type { EngineEvent, EngineRoom, GenericCardGameState, GenericZoneState } from "./games/types.js";
 export { compileDefinitions };
 
-const runtimes: Record<EngineGameId, RuntimeGame> = {
-  "klondike-draw-3": klondikeRuntime,
-  "go-fish-2p": goFishRuntime
-};
-
 export function getRuntime(gameId: string): RuntimeGame {
-  const runtimeName = compileDefinitions().find((definition) => definition.id === gameId)?.engine.runtime ?? gameId;
-  const runtime =
-    runtimeName === "klondike" ? klondikeRuntime :
-    runtimeName === "go-fish" ? goFishRuntime :
-    runtimes[gameId];
-  if (!runtime) throw new Error(`Unknown game: ${gameId}`);
-  return runtime;
+  const definition = compileDefinitions().find((candidate) => candidate.id === gameId);
+  if (!definition) throw new Error(`Unknown game: ${gameId}`);
+  return createGenericRuntime(definition);
 }
 
 export function createRoom(input: { gameId: EngineGameId; name: string; players: Player[]; seed?: number }): EngineRoom {

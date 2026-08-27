@@ -5,7 +5,11 @@ const suitSymbols: Record<string, string> = {
   clubs: "♣",
   diamonds: "♦",
   hearts: "♥",
-  spades: "♠"
+  spades: "♠",
+  Clubs: "♣",
+  Diamonds: "♦",
+  Hearts: "♥",
+  Spades: "♠"
 };
 
 export function CardView({ card, compact = false }: { card?: Card; compact?: boolean }) {

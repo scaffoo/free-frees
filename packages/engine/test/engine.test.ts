@@ -5,22 +5,22 @@ describe("Definitions", () => {
   it("loads game definitions from JSON files", () => {
     const definitions = compileDefinitions();
     expect(definitions.map((definition) => definition.id).sort()).toEqual(["go-fish-2p", "klondike-draw-3"]);
-    expect(definitions.every((definition) => definition.engine.languageVersion === "0.1")).toBe(true);
+    expect(definitions.every((definition) => definition.engine.runtime === "genericCardGame")).toBe(true);
   });
 });
 
 describe("Klondike", () => {
   it("deals traditional draw-3 layout and draws from stock", () => {
-    const room = createRoom({ gameId: "klondike-draw-3", name: "Solo", seed: 42, players: [{ id: "p1", name: "A", seat: 0, isBot: false }] });
+    const room = createRoom({ gameId: "klondike-draw-3", name: "Solo", seed: 42, players: [{ id: "1", name: "A", seat: 0, isBot: false }] });
     const state = room.state;
-    expect(state.kind).toBe("klondike");
-    if (state.kind !== "klondike") return;
-    expect(state.tableau.map((col) => col.length)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(state.stock).toHaveLength(24);
-    const updated = submitMove(room, "draw-stock", "p1");
-    if (updated.state.kind !== "klondike") return;
-    expect(updated.state.waste).toHaveLength(3);
-    expect(updated.state.stock).toHaveLength(21);
+    expect(state.kind).toBe("generic-card-game");
+    expect([1, 2, 3, 4, 5, 6, 7].map((column) => state.zones[`T${column}-Up`].cards.length + state.zones[`T${column}-Down`].cards.length)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(state.zones.D1.cards).toHaveLength(24);
+    const draw = legalMoves(room, "1").find((move) => move.payload.from === "D1" && move.payload.to === "C1" && move.payload.count === 3);
+    expect(draw).toBeDefined();
+    const updated = submitMove(room, draw!.id, "1");
+    expect(updated.state.zones.C1.cards).toHaveLength(3);
+    expect(updated.state.zones.D1.cards).toHaveLength(21);
   });
 });
 
@@ -31,13 +31,13 @@ describe("Go Fish", () => {
       name: "Fish",
       seed: 7,
       players: [
-        { id: "p1", name: "A", seat: 0, isBot: false },
-        { id: "p2", name: "B", seat: 1, isBot: true }
+        { id: "1", name: "A", seat: 0, isBot: false },
+        { id: "2", name: "B", seat: 1, isBot: true }
       ]
     });
-    const moves = legalMoves(room, "p1");
+    const moves = legalMoves(room, "1");
     expect(moves.length).toBeGreaterThan(0);
-    expect(moves.every((move) => move.type === "gofish.askRank")).toBe(true);
-    expect(legalMoves(room, "p2")).toHaveLength(0);
+    expect(moves.every((move) => move.type === "communicate")).toBe(true);
+    expect(legalMoves(room, "2")).toHaveLength(0);
   });
 });

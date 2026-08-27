@@ -32,9 +32,9 @@ export async function getRoom(roomId: string, viewerPlayerId?: string): Promise<
   return toRoomView(room, viewerPlayerId);
 }
 
-export async function createRoom(input: { gameId: "klondike-draw-3" | "go-fish-2p"; name: string; ownerUserId: string; ownerName: string; botCount: number }) {
-  const players: Player[] = [{ id: nanoid(), userId: input.ownerUserId, name: input.ownerName, seat: 0, isBot: false }];
-  for (let i = 0; i < input.botCount; i += 1) players.push({ id: nanoid(), name: `Bot ${i + 1}`, seat: players.length, isBot: true });
+export async function createRoom(input: { gameId: string; name: string; ownerUserId: string; ownerName: string; botCount: number }) {
+  const players: Player[] = [{ id: "1", userId: input.ownerUserId, name: input.ownerName, seat: 0, isBot: false }];
+  for (let i = 0; i < input.botCount; i += 1) players.push({ id: String(players.length + 1), name: `Bot ${i + 1}`, seat: players.length, isBot: true });
   const room = createEngineRoom({ gameId: input.gameId, name: input.name, players });
   memoryRooms.set(room.id, room);
   await prisma.room.create({
@@ -56,7 +56,7 @@ export async function joinRoom(roomId: string, user: { id: string; name: string 
   if (!room) throw new Error("Room not found");
   if (room.players.some((player) => player.userId === user.id)) return toRoomView(room, room.players.find((player) => player.userId === user.id)?.id);
   if (room.players.length >= 2) throw new Error("Room is full");
-  const player: Player = { id: nanoid(), userId: user.id, name: user.name, seat: room.players.length, isBot: false };
+  const player: Player = { id: String(room.players.length + 1), userId: user.id, name: user.name, seat: room.players.length, isBot: false };
   const next = createEngineRoom({ gameId: room.gameId, name: room.name, players: [...room.players, player], seed: room.seed });
   next.id = room.id;
   next.createdAt = room.createdAt;
@@ -82,12 +82,12 @@ export async function submitRoomMove(roomId: string, moveId: string, userId: str
   const actor = room.players.find((player) => player.userId === userId);
   if (!actor) throw new Error("Not seated in room");
   let next = submitMove(room, moveId, actor.id);
-  let bot = next.players.find((player) => player.isBot && next.state.kind === "go-fish" && next.state.currentPlayerId === player.id);
+  let bot = next.players.find((player) => player.isBot && next.state.kind === "generic-card-game" && String(next.state.actor) === player.id);
   while (bot && next.status === "active") {
     const botMove = chooseRandomBotMove(next, bot.id);
     if (!botMove) break;
     next = submitMove(next, botMove.id, bot.id);
-    bot = next.players.find((player) => player.isBot && next.state.kind === "go-fish" && next.state.currentPlayerId === player.id);
+    bot = next.players.find((player) => player.isBot && next.state.kind === "generic-card-game" && String(next.state.actor) === player.id);
   }
   memoryRooms.set(roomId, next);
   void persistRoom(next).catch((error) => {
