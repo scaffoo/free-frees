@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  sessions     Session[]
+  roomPlayers  RoomPlayer[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model GameDefinition {
+  id        String   @id
+  version   String
+  name      String
+  document  String
+  createdAt DateTime @default(now())
+  rooms     Room[]
+}
+
+model Room {
+  id          String         @id
+  gameId      String
+  game        GameDefinition @relation(fields: [gameId], references: [id])
+  name        String
+  status      String
+  seed        Int
+  snapshot    GameSnapshot?
+  players     RoomPlayer[]
+  events      GameEvent[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model RoomPlayer {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  playerId  String
+  name      String
+  seat      Int
+  isBot     Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  @@unique([roomId, playerId])
+}
+
+model GameSnapshot {
+  id        String   @id @default(cuid())
+  roomId    String   @unique
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  state     String
+  revision  Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model GameEvent {
+  id        String   @id
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  playerId  String?
+  type      String
+  payload   String
+  createdAt DateTime @default(now())
+}

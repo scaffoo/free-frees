@@ -1,0 +1,81 @@
+{
+  "id": "klondike-draw-3",
+  "version": "0.1.0",
+  "name": "Klondike Solitaire Draw 3",
+  "description": "Traditional single-player Klondike with draw-three stock, waste recycling, alternating-color tableau builds, and suit foundations.",
+  "minPlayers": 1,
+  "maxPlayers": 1,
+  "engine": {
+    "runtime": "klondike",
+    "languageVersion": "0.1"
+  },
+  "deck": {
+    "type": "standard-52",
+    "includeJokers": false
+  },
+  "zones": [
+    { "id": "stock", "kind": "stock", "visibility": "hidden", "owner": "none" },
+    { "id": "waste", "kind": "waste", "visibility": "public", "owner": "none" },
+    { "id": "tableau", "kind": "tableau", "visibility": "public", "owner": "seat", "count": 7 },
+    { "id": "foundation", "kind": "foundation", "visibility": "public", "owner": "seat", "count": 4, "labels": ["clubs", "diamonds", "hearts", "spades"] }
+  ],
+  "setup": [
+    { "op": "deck.create", "args": { "deck": "standard-52" } },
+    { "op": "deck.shuffle", "args": { "source": "deck", "rng": "room.seed" } },
+    { "op": "deal.tableauIncreasing", "args": { "source": "deck", "target": "tableau", "columns": 7, "flipTop": true } },
+    { "op": "move.remaining", "args": { "source": "deck", "target": "stock", "faceUp": false } }
+  ],
+  "turn": {
+    "mode": "solitaire",
+    "phases": [
+      {
+        "id": "play",
+        "player": "current",
+        "choices": ["draw-stock", "recycle-waste", "move-card-or-run"]
+      }
+    ]
+  },
+  "actions": [
+    {
+      "id": "draw-stock",
+      "label": "Draw 3",
+      "legal": [{ "op": "zone.notEmpty", "args": { "zone": "stock" } }],
+      "effect": [{ "op": "move.topN", "args": { "source": "stock", "target": "waste", "count": 3, "faceUp": true } }]
+    },
+    {
+      "id": "recycle-waste",
+      "label": "Recycle waste",
+      "legal": [
+        { "op": "zone.empty", "args": { "zone": "stock" } },
+        { "op": "zone.notEmpty", "args": { "zone": "waste" } }
+      ],
+      "effect": [{ "op": "move.allReverse", "args": { "source": "waste", "target": "stock", "faceUp": false } }]
+    },
+    {
+      "id": "move-card-or-run",
+      "label": "Move card or run",
+      "input": [
+        { "id": "source", "kind": "zone" },
+        { "id": "target", "kind": "zone" },
+        { "id": "card", "kind": "card" }
+      ],
+      "legal": [
+        { "op": "card.faceUp", "args": { "card": "$card" } },
+        { "op": "any", "args": { "rules": ["tableau.descendingAlternateColor", "foundation.ascendingSameSuit"] } }
+      ],
+      "effect": [
+        { "op": "move.selection", "args": { "source": "$source", "target": "$target", "card": "$card" } },
+        { "op": "tableau.revealUncovered", "args": {} }
+      ]
+    }
+  ],
+  "scoring": [],
+  "endConditions": [
+    {
+      "id": "all-foundations-complete",
+      "when": [{ "op": "zones.totalCards", "args": { "zones": "foundation", "equals": 52 } }],
+      "result": [{ "op": "game.win", "args": { "players": "all" } }]
+    }
+  ],
+  "bot": { "strategy": "none" }
+}

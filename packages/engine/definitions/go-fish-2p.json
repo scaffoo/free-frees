@@ -1,0 +1,82 @@
+{
+  "id": "go-fish-2p",
+  "version": "0.1.0",
+  "name": "Go Fish",
+  "description": "Two-player Go Fish with hidden hands, ask-rank turns, stock draws, books of four, and random-legal bot support.",
+  "minPlayers": 2,
+  "maxPlayers": 2,
+  "engine": {
+    "runtime": "go-fish",
+    "languageVersion": "0.1"
+  },
+  "deck": {
+    "type": "standard-52",
+    "includeJokers": false
+  },
+  "zones": [
+    { "id": "stock", "kind": "stock", "visibility": "hidden", "owner": "none" },
+    { "id": "hand", "kind": "hand", "visibility": "owner-only", "owner": "player" },
+    { "id": "books", "kind": "book", "visibility": "public", "owner": "player" }
+  ],
+  "setup": [
+    { "op": "deck.create", "args": { "deck": "standard-52" } },
+    { "op": "deck.shuffle", "args": { "source": "deck", "rng": "room.seed" } },
+    { "op": "deal.each", "args": { "source": "deck", "target": "hand", "count": 7 } },
+    { "op": "move.remaining", "args": { "source": "deck", "target": "stock", "faceUp": false } },
+    { "op": "score.completeBooks", "args": { "rankCount": 4 } }
+  ],
+  "turn": {
+    "mode": "clockwise",
+    "phases": [
+      {
+        "id": "ask",
+        "player": "current",
+        "choices": ["ask-rank"]
+      },
+      {
+        "id": "score",
+        "player": "none",
+        "automatic": [{ "op": "score.completeBooks", "args": { "rankCount": 4 } }]
+      }
+    ]
+  },
+  "actions": [
+    {
+      "id": "ask-rank",
+      "label": "Ask another player for a rank",
+      "input": [
+        { "id": "targetPlayer", "kind": "player" },
+        { "id": "rank", "kind": "rank" }
+      ],
+      "legal": [
+        { "op": "player.isCurrent", "args": { "player": "$actor" } },
+        { "op": "hand.containsRank", "args": { "player": "$actor", "rank": "$rank" } },
+        { "op": "player.other", "args": { "player": "$targetPlayer" } }
+      ],
+      "effect": [
+        { "op": "if.targetHasRank.transferAll", "args": { "from": "$targetPlayer", "to": "$actor", "rank": "$rank", "continueTurn": true } },
+        { "op": "else.drawOne", "args": { "source": "stock", "to": "$actor", "continueIfRank": "$rank" } },
+        { "op": "score.completeBooks", "args": { "rankCount": 4 } }
+      ]
+    }
+  ],
+  "scoring": [
+    { "op": "score.books", "args": { "zone": "books", "pointsEach": 1 } }
+  ],
+  "endConditions": [
+    {
+      "id": "all-books-complete",
+      "when": [{ "op": "books.total", "args": { "equals": 13 } }],
+      "result": [{ "op": "game.highScoreWins", "args": { "score": "books" } }]
+    },
+    {
+      "id": "stock-and-hands-empty",
+      "when": [
+        { "op": "zone.empty", "args": { "zone": "stock" } },
+        { "op": "zones.empty", "args": { "zones": "hand" } }
+      ],
+      "result": [{ "op": "game.highScoreWins", "args": { "score": "books" } }]
+    }
+  ],
+  "bot": { "strategy": "random-legal" }
+}
