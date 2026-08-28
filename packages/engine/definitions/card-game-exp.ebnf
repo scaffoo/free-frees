@@ -1,0 +1,113 @@
+(*
+   Generic Traditional Card Game Expression Language, draft 0.1.
+   This grammar defines the embedded expression language used by card-game.ebnf
+   fields such as predicate, source, destination, selection, placement, and
+   completion.
+
+   Expression is the root syntax type. Field-specific meaning is checked by the
+   evaluator/type layer: a predicate field expects an expression that evaluates
+   to Boolean, a selection field expects an expression that evaluates to a card
+   selection, and a placement field expects an expression that evaluates to a
+   placement.
+*)
+
+Expression          = BooleanExpression ;
+BooleanExpression   = OrExpression ;
+OrExpression        = AndExpression, { "or", AndExpression } ;
+AndExpression       = NotExpression, { "and", NotExpression } ;
+NotExpression       = [ "not" ], ComparisonExpression ;
+ComparisonExpression = MembershipExpression, [ CompareOp, MembershipExpression ] ;
+CompareOp           = "=" | "!=" | ">" | ">=" | "<" | "<=" ;
+MembershipExpression = ArithmeticExpression, [ "in", SetExpression ] ;
+ArithmeticExpression = AdditiveExpression ;
+AdditiveExpression  = MultiplicativeExpression, { ("+" | "-"), MultiplicativeExpression } ;
+MultiplicativeExpression = UnaryExpression, { ("*" | "/"), UnaryExpression } ;
+UnaryExpression     = [ "-" ], PrimaryExpression ;
+
+PrimaryExpression   = Literal |
+                      PathExpression |
+                      FunctionCall |
+                      SelectionExpression |
+                      PlacementExpression |
+                      ExistsExpression |
+                      "(", Expression, ")" ;
+
+ExistsExpression    = "exists", Binding, "in", SetExpression, "where", Expression ;
+
+(*
+   Selection expressions are source-local.
+   They may inspect only cards in the source zone and source-zone/card
+   attributes. They must not inspect arbitrary game state, other zones, actor,
+   turn phase, or variables except values explicitly bound as action parameters.
+*)
+SelectionExpression = TopSelection |
+                      BottomSelection |
+                      IndexSelection |
+                      RangeSelection |
+                      WhereSelection ;
+TopSelection        = "Top", "(", Expression, ")" ;
+BottomSelection     = "Bottom", "(", Expression, ")" ;
+IndexSelection      = "Index", "(", Expression, ")" ;
+RangeSelection      = "Range", "(", Expression, ",", Expression, ")" ;
+WhereSelection      = "Where", "(", CardExpression, ")" ;
+
+PlacementExpression = "Top" |
+                      "Bottom" |
+                      "Index", "(", Expression, ")" ;
+
+(*
+   CardExpression is selection-local. The root symbol "card" is the candidate
+   card from the source zone. The root symbol "source" is the source zone.
+   Parameter references are allowed only when bound by the containing action.
+*)
+CardExpression      = CardOrExpression ;
+CardOrExpression    = CardAndExpression, { "or", CardAndExpression } ;
+CardAndExpression   = CardNotExpression, { "and", CardNotExpression } ;
+CardNotExpression   = [ "not" ], CardComparisonExpression ;
+CardComparisonExpression = CardPrimaryExpression, [ CompareOp, CardPrimaryExpression ] ;
+CardPrimaryExpression = CardPathExpression |
+                      Literal |
+                      ParameterRef |
+                      FunctionCall |
+                      "(", CardExpression, ")" ;
+
+SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
+                      PathExpression |
+                      FunctionCall ;
+
+FunctionCall        = Identifier, "(", [ Expression, { ",", Expression } ], ")" ;
+PathExpression      = PathRoot, ".", Identifier, { ".", Identifier } ;
+CardPathExpression  = CardPathRoot, ".", Identifier, { ".", Identifier } ;
+
+PathRoot            = "GameSetup" |
+                      "GameState" |
+                      "Action" |
+                      "Actor" |
+                      "Target" |
+                      ZoneRef |
+                      PlayerRef ;
+CardPathRoot        = "card" | "source" | ParameterRef ;
+
+PlayerExpr          = "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
+
+Binding             = Identifier ;
+ParameterRef        = "$", Identifier ;
+ZoneRef             = Identifier ;
+PlayerRef           = "P", Integer ;
+
+Literal             = String | Integer | Boolean | Null | Identifier ;
+Boolean             = "true" | "false" ;
+Null                = "null" ;
+
+Identifier          = Letter, { Letter | Digit | "_" | "-" } ;
+String              = '"', { ? any character except " ? }, '"' ;
+Integer             = Digit, { Digit } ;
+Letter              = "A" | "B" | "C" | "D" | "E" | "F" | "G" |
+                      "H" | "I" | "J" | "K" | "L" | "M" | "N" |
+                      "O" | "P" | "Q" | "R" | "S" | "T" | "U" |
+                      "V" | "W" | "X" | "Y" | "Z" |
+                      "a" | "b" | "c" | "d" | "e" | "f" | "g" |
+                      "h" | "i" | "j" | "k" | "l" | "m" | "n" |
+                      "o" | "p" | "q" | "r" | "s" | "t" | "u" |
+                      "v" | "w" | "x" | "y" | "z" ;
+Digit               = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
