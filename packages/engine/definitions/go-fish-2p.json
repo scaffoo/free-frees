@@ -13,7 +13,6 @@
       { "id": 2, "type": "Human" }
     ],
     "cards": {
-      "count": 52,
       "decks": 1,
       "suits": ["Hearts", "Diamonds", "Clubs", "Spades"],
       "values": [

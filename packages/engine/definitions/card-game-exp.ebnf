@@ -25,7 +25,7 @@ UnaryExpression     = [ "-" ], PrimaryExpression ;
 PrimaryExpression   = Literal |
                       BindingRef |
                       PathExpression |
-                      FunctionCall |
+                      BuiltInFunctionCall |
                       SelectionExpression |
                       PlacementExpression |
                       ExistsExpression |
@@ -56,9 +56,7 @@ PlacementExpression = "Top" |
 
 SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
                       PathExpression |
-                      FunctionCall ;
-
-FunctionCall        = Identifier, "(", [ Expression, { ",", Expression } ], ")" ;
+                      BuiltInFunctionCall ;
 
 (*
    Bindings are named values supplied by the evaluator for the expression's
@@ -88,11 +86,61 @@ PathExpression      = GamePath |
                       PlayerPath |
                       ZonePath |
                       CardPath ;
-PathSegment         = Identifier |
-                      FunctionCall ;
 
-GamePath            = ("GameSetup" | "GameState"), ".", PathSegment, { ".", PathSegment } ;
-ActionPath          = "Action", ".", PathSegment, { ".", PathSegment } ;
+GamePath            = GameSetupPath |
+                      GameStatePath ;
+GameSetupPath       = "GameSetup", ".", GameSetupMember ;
+GameSetupMember     = "Players" |
+                      "Players", ".", CollectionMember |
+                      "Players", Indexer, ".", PlayerDefinitionMember |
+                      "Cards" |
+                      "Cards", ".", CardSetupMember |
+                      "ZoneDefinitions" |
+                      "ZoneDefinitions", ".", CollectionMember |
+                      "ZoneDefinitions", Indexer, ".", ZoneDefinitionMember |
+                      "Actions" |
+                      "Actions", ".", CollectionMember |
+                      "Completion" ;
+CardSetupMember     = "decks" |
+                      "suits" |
+                      "values" |
+                      "suits", ".", CollectionMember |
+                      "values", ".", CollectionMember ;
+PlayerDefinitionMember = "id" |
+                      "type" ;
+ZoneDefinitionMember = "label" |
+                      "type" |
+                      "visibility" |
+                      "player" |
+                      "attributes", ".", AttributeName ;
+GameStatePath       = "GameState", ".", GameStateMember ;
+GameStateMember     = "Turn" |
+                      "Turn", ".", TurnMember |
+                      "StateType" |
+                      "Variables" |
+                      "Variables", ".", VariableName |
+                      "Zones" |
+                      "Zones", ".", CollectionMember |
+                      "Zones", Indexer, ".", ZoneMember ;
+TurnMember          = "actor" |
+                      "minimumActions" |
+                      "maximumActions" ;
+CollectionMember    = "count" |
+                      "ranks" |
+                      "suits" |
+                      "values" ;
+
+ActionPath          = "Action", ".", ActionMember ;
+ActionMember        = "name" |
+                      "type" |
+                      "initiator" |
+                      "source" |
+                      "destination" |
+                      "selection" |
+                      "placement" |
+                      "value" |
+                      "count" |
+                      "message" ;
 
 (*
    Player paths provide convenience access to common player-related zones.
@@ -100,21 +148,49 @@ ActionPath          = "Action", ".", PathSegment, { ".", PathSegment } ;
    means the Hand zone whose player field is Target. The same convention applies
    to books and zones.
 *)
-PlayerPath          = PlayerRoot, ".", PlayerMember, { ".", PathSegment } ;
+PlayerPath          = PlayerRoot, ".", PlayerMember, { ".", PlayerPathMember } ;
 PlayerRoot          = "Actor" |
                       "Target" |
                       PlayerRef ;
-PlayerMember        = "hand" |
+PlayerMember        = "id" |
+                      "type" |
+                      "hand" |
                       "books" |
-                      "zones" |
-                      Identifier ;
+                      "zones" ;
+PlayerPathMember    = ZoneMember |
+                      CollectionMember ;
 
-ZonePath            = ZoneRoot, ".", PathSegment, { ".", PathSegment } ;
+ZonePath            = ZoneRoot, ".", ZoneMember, { ".", ZonePathMember } ;
 ZoneRoot            = "source" |
                       "destination" |
                       ZoneRef ;
+ZoneMember          = "label" |
+                      "type" |
+                      "visibility" |
+                      "player" |
+                      "count" |
+                      "top" |
+                      "cards" |
+                      "ranks" |
+                      "attributes", ".", AttributeName |
+                      ZoneMethodCall ;
+ZonePathMember      = ZoneMember |
+                      CardMember |
+                      CollectionMember ;
 
-CardPath            = "card", ".", PathSegment, { ".", PathSegment } ;
+CardPath            = CardRoot, ".", CardMember ;
+CardRoot            = "card" |
+                      "top" ;
+CardMember          = "rank" |
+                      "suit" |
+                      "value" |
+                      "color" ;
+
+ZoneMethodCall      = "cardFromTop", "(", Expression, ")", ".", CardMember ;
+BuiltInFunctionCall = "nextPlayer", "(", Expression, ")" ;
+Indexer             = "[", Expression, "]" ;
+AttributeName       = Identifier ;
+VariableName        = Identifier ;
 
 PlayerExpr          = "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
 

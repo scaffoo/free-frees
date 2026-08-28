@@ -74,19 +74,19 @@
         "name": "FlipTableauCard",
         "type": "ZoneTransfer",
         "initiator": "Trigger",
-        "predicate": "source.type = Tableau and source.visibility = Hidden and destination.type = Tableau and destination.visibility = Public and source.column = destination.column and source.count > 0 and destination.count = 0"
+        "predicate": "source.type = Tableau and source.visibility = Hidden and destination.type = Tableau and destination.visibility = Public and source.attributes.column = destination.attributes.column and source.count > 0 and destination.count = 0"
       },
       {
         "name": "TableauToEmptyTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.column != destination.column and source.count > 0 and destination.count = 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank = 13"
+        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.attributes.column != destination.attributes.column and source.count > 0 and destination.count = 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank = 13"
       },
       {
         "name": "TableauToTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.column != destination.column and source.count > 0 and destination.count > 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank + 1 = destination.top.rank and source.cardFromTop(count).color != destination.top.color"
+        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.attributes.column != destination.attributes.column and source.count > 0 and destination.count > 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank + 1 = destination.top.rank and source.cardFromTop(count).color != destination.top.color"
       },
       {
         "name": "WasteToEmptyTableau",
@@ -116,13 +116,13 @@
         "name": "AceToFoundation",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and destination.count = 0 and source.count > 0 and source.top.rank = 1 and source.top.suit = destination.suit and count = 1"
+        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and destination.count = 0 and source.count > 0 and source.top.rank = 1 and source.top.suit = destination.attributes.suit and count = 1"
       },
       {
         "name": "BuildFoundation",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and source.count > 0 and destination.count > 0 and source.top.suit = destination.suit and source.top.rank = destination.top.rank + 1 and count = 1"
+        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and source.count > 0 and destination.count > 0 and source.top.suit = destination.attributes.suit and source.top.rank = destination.top.rank + 1 and count = 1"
       }
     ],
     "completion": {
