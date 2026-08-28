@@ -1,138 +1,114 @@
 {
   "id": "go-fish-2p",
-  "version": "0.2.0",
-  "name": "Go Fish",
-  "description": "Two-player Go Fish modeled with ZoneTransfer, Communicate, rules, variables, and generic effects.",
-  "engine": {
-    "runtime": "genericCardGame",
-    "languageVersion": "0.2"
+  "schemaVersion": "0.3",
+  "metadata": {
+    "name": "Go Fish",
+    "version": "0.3.0",
+    "description": "Two-player Go Fish modeled with generic Communicate, ZoneTransfer-capable rules, attributes, and game state."
   },
-  "players": {
-    "count": 2,
+  "gameSetup": {
     "players": [
       { "id": 0, "type": "Null" },
       { "id": 1, "type": "Human" },
       { "id": 2, "type": "Human" }
-    ]
-  },
-  "cards": {
-    "count": 52,
-    "decks": 1,
-    "suits": ["Hearts", "Diamonds", "Clubs", "Spades"],
-    "values": [
-      { "name": "Ace", "value": 1, "rank": 1 },
-      { "name": "2", "value": 2, "rank": 2 },
-      { "name": "3", "value": 3, "rank": 3 },
-      { "name": "4", "value": 4, "rank": 4 },
-      { "name": "5", "value": 5, "rank": 5 },
-      { "name": "6", "value": 6, "rank": 6 },
-      { "name": "7", "value": 7, "rank": 7 },
-      { "name": "8", "value": 8, "rank": 8 },
-      { "name": "9", "value": 9, "rank": 9 },
-      { "name": "10", "value": 10, "rank": 10 },
-      { "name": "Jack", "value": 11, "rank": 11 },
-      { "name": "Queen", "value": 12, "rank": 12 },
-      { "name": "King", "value": 13, "rank": 13 }
-    ]
-  },
-  "zones": [
-    { "label": "D1", "attributes": { "type": "Draw", "visibility": "Hidden" } },
-    { "label": "P1-Hand", "attributes": { "type": "Hand", "visibility": "Player", "player": 1 } },
-    { "label": "P2-Hand", "attributes": { "type": "Hand", "visibility": "Player", "player": 2 } },
-    { "label": "P1-Books", "attributes": { "type": "Book", "visibility": "Public", "player": 1 } },
-    { "label": "P2-Books", "attributes": { "type": "Book", "visibility": "Public", "player": 2 } }
-  ],
-  "actions": {
-    "zoneTransfer": {
-      "parameters": ["source", "destination", "count"],
-      "semantics": { "source": "Zone", "destination": "Zone", "count": "Integer", "selection": "Top", "placement": "Top" }
+    ],
+    "cards": {
+      "count": 52,
+      "decks": 1,
+      "suits": ["Hearts", "Diamonds", "Clubs", "Spades"],
+      "values": [
+        { "name": "Ace", "value": 1, "rank": 1 },
+        { "name": "2", "value": 2, "rank": 2 },
+        { "name": "3", "value": 3, "rank": 3 },
+        { "name": "4", "value": 4, "rank": 4 },
+        { "name": "5", "value": 5, "rank": 5 },
+        { "name": "6", "value": 6, "rank": 6 },
+        { "name": "7", "value": 7, "rank": 7 },
+        { "name": "8", "value": 8, "rank": 8 },
+        { "name": "9", "value": 9, "rank": 9 },
+        { "name": "10", "value": 10, "rank": 10 },
+        { "name": "Jack", "value": 11, "rank": 11 },
+        { "name": "Queen", "value": 12, "rank": 12 },
+        { "name": "King", "value": 13, "rank": 13 }
+      ]
     },
-    "communicate": {
-      "parameters": ["source", "destination", "verb", "value"],
-      "semantics": { "source": "Player", "destination": "Player", "verb": "Identifier", "value": "Optional" }
-    }
-  },
-  "initialState": {
-    "stateType": "Initial",
-    "variables": { "phase": "Ask" },
-    "actor": 1,
-    "zones": {
-      "P1-Hand": 7,
-      "P2-Hand": 7,
-      "D1": 38,
-      "P1-Books": 0,
-      "P2-Books": 0
-    },
-    "distribution": { "random": true }
-  },
-  "stateTypes": {
-    "Initial": {},
-    "InPlay": {
-      "predicate": {
-        "not": {
-          "any": [
-            { "equals": ["P1-Books.count + P2-Books.count", 52] },
-            {
-              "all": [
-                { "equals": ["D1.count", 0] },
-                { "equals": ["P1-Hand.count", 0] },
-                { "equals": ["P2-Hand.count", 0] }
-              ]
-            }
-          ]
-        }
-      }
-    },
-    "Completion": {
-      "predicate": {
-        "any": [
-          { "equals": ["P1-Books.count + P2-Books.count", 52] },
+    "zoneDefinitions": [
+      { "label": "D1", "type": "Draw", "visibility": "Hidden" },
+      { "label": "P1-Hand", "type": "Hand", "visibility": "Player", "player": 1 },
+      { "label": "P2-Hand", "type": "Hand", "visibility": "Player", "player": 2 },
+      { "label": "P1-Books", "type": "Book", "visibility": "Public", "player": 1 },
+      { "label": "P2-Books", "type": "Book", "visibility": "Public", "player": 2 }
+    ],
+    "actions": [
+      {
+        "name": "AskForRank",
+        "type": "Communicate",
+        "initiator": "Player",
+        "message": "Do you have any {value}?",
+        "predicate": "Actor.hand.count > 0 and Target != Actor and value in Actor.hand.ranks",
+        "effects": [
           {
-            "all": [
-              { "equals": ["D1.count", 0] },
-              { "equals": ["P1-Hand.count", 0] },
-              { "equals": ["P2-Hand.count", 0] }
+            "name": "AnswerYesWithRank",
+            "type": "Communicate",
+            "initiator": "Trigger",
+            "predicate": "value in Target.hand.ranks",
+            "message": "Yes, I have {value}.",
+            "effects": [
+              {
+                "name": "TransferRequestedRank",
+                "type": "ZoneTransfer",
+                "initiator": "Trigger",
+                "predicate": "value in Target.hand.ranks",
+                "source": "Target.hand",
+                "destination": "Actor.hand",
+                "selection": "Where(card.rank = value)",
+                "placement": "Top"
+              }
+            ]
+          },
+          {
+            "name": "AnswerNoWithRank",
+            "type": "Communicate",
+            "initiator": "Trigger",
+            "predicate": "not value in Target.hand.ranks",
+            "message": "Go fish.",
+            "effects": [
+              {
+                "name": "DrawFromStock",
+                "type": "ZoneTransfer",
+                "initiator": "Trigger",
+                "predicate": "D1.count > 0",
+                "source": "D1",
+                "destination": "Actor.hand",
+                "selection": "Top(1)",
+                "placement": "Top"
+              }
             ]
           }
         ]
       }
+    ],
+    "completion": {
+      "predicate": "(P1-Books.count + P2-Books.count = 52) or (D1.count = 0 and P1-Hand.count = 0 and P2-Hand.count = 0)"
     }
   },
-  "rules": [
-    {
-      "name": "AskForRank",
-      "predicate": {
-        "all": [
-          { "equals": ["verb", "AskRank"] },
-          { "notEquals": ["source", "destination"] },
-          { "equals": ["source", "actor"] },
-          { "greaterThan": ["source.hand.count", 0] },
-          { "in": ["value", "source.hand.ranks"] }
-        ]
-      },
-      "action": {
-        "communicate": {
-          "source": "source",
-          "destination": "destination",
-          "verb": "AskRank",
-          "value": "value"
-        }
-      },
-      "effects": [
-        { "op": "communicate.transferMatchingValueOrDraw", "args": { "fromType": "Hand", "drawType": "Draw" } },
-        { "op": "sets.collectBooks", "args": { "fromType": "Hand", "toType": "Book", "rankCount": 4 } },
-        { "op": "state.evaluateCompletion", "args": {} }
-      ]
-    }
-  ],
-  "turn": {
-    "actor": 1,
-    "minimumActions": 1,
-    "maximumActions": 1
-  },
-  "ruleEvaluation": {
-    "default": "Deny",
-    "applicableRules": "Derived"
-  },
-  "bot": { "strategy": "random-legal" }
+  "gameState": {
+    "turn": {
+      "actor": 1,
+      "minimumActions": 1,
+      "maximumActions": 1
+    },
+    "stateType": "Initial",
+    "variables": {
+      "phase": "Ask"
+    },
+    "zones": [
+      { "label": "P1-Hand", "count": 7 },
+      { "label": "P2-Hand", "count": 7 },
+      { "label": "D1", "count": 38 },
+      { "label": "P1-Books", "count": 0 },
+      { "label": "P2-Books", "count": 0 }
+    ],
+    "distribution": "Random"
+  }
 }

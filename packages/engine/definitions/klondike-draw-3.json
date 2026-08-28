@@ -1,721 +1,164 @@
 {
   "id": "klondike-draw-3",
-  "version": "0.2.0",
-  "name": "Klondike Draw 3",
-  "engine": {
-    "runtime": "genericCardGame",
-    "languageVersion": "0.2"
+  "schemaVersion": "0.3",
+  "metadata": {
+    "name": "Klondike Draw 3",
+    "version": "0.3.0",
+    "description": "Single-player Klondike solitaire with a draw-three stock."
   },
-
-  "players": {
-    "count": 1,
+  "gameSetup": {
     "players": [
-      {
-        "id": 1,
-        "type": "Human"
-      }
-    ]
-  },
-
-  "cards": {
-    "count": 52,
-    "decks": 1,
-
-    "suits": [
-      "Hearts",
-      "Diamonds",
-      "Clubs",
-      "Spades"
+      { "id": 1, "type": "Human" }
     ],
-
-    "values": [
-      { "name": "Ace",   "value": 1,  "rank": 1 },
-      { "name": "2",     "value": 2,  "rank": 2 },
-      { "name": "3",     "value": 3,  "rank": 3 },
-      { "name": "4",     "value": 4,  "rank": 4 },
-      { "name": "5",     "value": 5,  "rank": 5 },
-      { "name": "6",     "value": 6,  "rank": 6 },
-      { "name": "7",     "value": 7,  "rank": 7 },
-      { "name": "8",     "value": 8,  "rank": 8 },
-      { "name": "9",     "value": 9,  "rank": 9 },
-      { "name": "10",    "value": 10, "rank": 10 },
-      { "name": "Jack",  "value": 11, "rank": 11 },
-      { "name": "Queen", "value": 12, "rank": 12 },
-      { "name": "King",  "value": 13, "rank": 13 }
-    ]
-  },
-
-  "zones": [
-    {
-      "label": "T1-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 1
-      }
+    "cards": {
+      "decks": 1,
+      "suits": ["Hearts", "Diamonds", "Clubs", "Spades"],
+      "values": [
+        { "name": "Ace", "value": 1, "rank": 1 },
+        { "name": "2", "value": 2, "rank": 2 },
+        { "name": "3", "value": 3, "rank": 3 },
+        { "name": "4", "value": 4, "rank": 4 },
+        { "name": "5", "value": 5, "rank": 5 },
+        { "name": "6", "value": 6, "rank": 6 },
+        { "name": "7", "value": 7, "rank": 7 },
+        { "name": "8", "value": 8, "rank": 8 },
+        { "name": "9", "value": 9, "rank": 9 },
+        { "name": "10", "value": 10, "rank": 10 },
+        { "name": "Jack", "value": 11, "rank": 11 },
+        { "name": "Queen", "value": 12, "rank": 12 },
+        { "name": "King", "value": 13, "rank": 13 }
+      ]
     },
-    {
-      "label": "T1-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 1
+    "zoneDefinitions": [
+      { "label": "T1-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 1 } },
+      { "label": "T1-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 1 } },
+      { "label": "T2-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 2 } },
+      { "label": "T2-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 2 } },
+      { "label": "T3-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 3 } },
+      { "label": "T3-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 3 } },
+      { "label": "T4-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 4 } },
+      { "label": "T4-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 4 } },
+      { "label": "T5-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 5 } },
+      { "label": "T5-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 5 } },
+      { "label": "T6-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 6 } },
+      { "label": "T6-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 6 } },
+      { "label": "T7-Up", "type": "Tableau", "visibility": "Public", "attributes": { "column": 7 } },
+      { "label": "T7-Down", "type": "Tableau", "visibility": "Hidden", "attributes": { "column": 7 } },
+      { "label": "D1", "type": "Draw", "visibility": "Hidden" },
+      { "label": "C1", "type": "Discard", "visibility": "Public" },
+      { "label": "F1-Hearts", "type": "Foundation", "visibility": "Public", "attributes": { "suit": "Hearts" } },
+      { "label": "F1-Diamonds", "type": "Foundation", "visibility": "Public", "attributes": { "suit": "Diamonds" } },
+      { "label": "F1-Clubs", "type": "Foundation", "visibility": "Public", "attributes": { "suit": "Clubs" } },
+      { "label": "F1-Spades", "type": "Foundation", "visibility": "Public", "attributes": { "suit": "Spades" } }
+    ],
+    "actions": [
+      {
+        "name": "DrawThree",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.label = D1 and destination.label = C1 and source.count >= 3 and count = 3"
+      },
+      {
+        "name": "DrawRemainingCards",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.label = D1 and destination.label = C1 and source.count > 0 and source.count < 3 and count = source.count"
+      },
+      {
+        "name": "RecycleWaste",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.label = C1 and destination.label = D1 and D1.count = 0 and C1.count > 0 and count = source.count"
+      },
+      {
+        "name": "FlipTableauCard",
+        "type": "ZoneTransfer",
+        "initiator": "Trigger",
+        "predicate": "source.type = Tableau and source.visibility = Hidden and destination.type = Tableau and destination.visibility = Public and source.column = destination.column and source.count > 0 and destination.count = 0"
+      },
+      {
+        "name": "TableauToEmptyTableau",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.column != destination.column and source.count > 0 and destination.count = 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank = 13"
+      },
+      {
+        "name": "TableauToTableau",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.column != destination.column and source.count > 0 and destination.count > 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank + 1 = destination.top.rank and source.cardFromTop(count).color != destination.top.color"
+      },
+      {
+        "name": "WasteToEmptyTableau",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type = Discard and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count = 0 and source.top.rank = 13 and count = 1"
+      },
+      {
+        "name": "WasteToTableau",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type = Discard and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count > 0 and source.top.rank + 1 = destination.top.rank and source.top.color != destination.top.color and count = 1"
+      },
+      {
+        "name": "FoundationToEmptyTableau",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type = Foundation and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count = 0 and source.top.rank = 13 and count = 1"
+      },
+      {
+        "name": "FoundationToTableau",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type = Foundation and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count > 0 and source.top.rank + 1 = destination.top.rank and source.top.color != destination.top.color and count = 1"
+      },
+      {
+        "name": "AceToFoundation",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and destination.count = 0 and source.count > 0 and source.top.rank = 1 and source.top.suit = destination.suit and count = 1"
+      },
+      {
+        "name": "BuildFoundation",
+        "type": "ZoneTransfer",
+        "initiator": "Player",
+        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and source.count > 0 and destination.count > 0 and source.top.suit = destination.suit and source.top.rank = destination.top.rank + 1 and count = 1"
       }
-    },
-
-    {
-      "label": "T2-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 2
-      }
-    },
-    {
-      "label": "T2-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 2
-      }
-    },
-
-    {
-      "label": "T3-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 3
-      }
-    },
-    {
-      "label": "T3-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 3
-      }
-    },
-
-    {
-      "label": "T4-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 4
-      }
-    },
-    {
-      "label": "T4-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 4
-      }
-    },
-
-    {
-      "label": "T5-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 5
-      }
-    },
-    {
-      "label": "T5-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 5
-      }
-    },
-
-    {
-      "label": "T6-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 6
-      }
-    },
-    {
-      "label": "T6-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 6
-      }
-    },
-
-    {
-      "label": "T7-Up",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Public",
-        "column": 7
-      }
-    },
-    {
-      "label": "T7-Down",
-      "attributes": {
-        "type": "Tableau",
-        "visibility": "Hidden",
-        "column": 7
-      }
-    },
-
-    {
-      "label": "D1",
-      "attributes": {
-        "type": "Draw",
-        "visibility": "Hidden"
-      }
-    },
-
-    {
-      "label": "C1",
-      "attributes": {
-        "type": "Discard",
-        "visibility": "Public"
-      }
-    },
-
-    {
-      "label": "F1-Hearts",
-      "attributes": {
-        "type": "Foundation",
-        "visibility": "Public",
-        "suit": "Hearts"
-      }
-    },
-    {
-      "label": "F1-Diamonds",
-      "attributes": {
-        "type": "Foundation",
-        "visibility": "Public",
-        "suit": "Diamonds"
-      }
-    },
-    {
-      "label": "F1-Clubs",
-      "attributes": {
-        "type": "Foundation",
-        "visibility": "Public",
-        "suit": "Clubs"
-      }
-    },
-    {
-      "label": "F1-Spades",
-      "attributes": {
-        "type": "Foundation",
-        "visibility": "Public",
-        "suit": "Spades"
-      }
-    }
-  ],
-
-  "actions": {
-    "zoneTransfer": {
-      "parameters": [
-        "source",
-        "destination",
-        "count"
-      ],
-
-      "semantics": {
-        "source": "Zone",
-        "destination": "Zone",
-        "count": "Integer",
-        "selection": "Top",
-        "placement": "Top"
-      }
-    },
-
-    "communicate": {
-      "parameters": [
-        "source",
-        "destination",
-        "verb",
-        "value"
-      ],
-
-      "semantics": {
-        "source": "Player",
-        "destination": "Player",
-        "verb": "Identifier",
-        "value": "Optional"
-      }
+    ],
+    "completion": {
+      "predicate": "F1-Hearts.count = 13 and F1-Diamonds.count = 13 and F1-Clubs.count = 13 and F1-Spades.count = 13"
     }
   },
-
-  "initialState": {
+  "gameState": {
+    "turn": {
+      "actor": 1,
+      "minimumActions": 1,
+      "maximumActions": "unbounded"
+    },
     "stateType": "Initial",
-
     "variables": {},
-
-    "actor": 1,
-
-    "zones": {
-      "T1-Up": 1,
-      "T1-Down": 0,
-
-      "T2-Up": 1,
-      "T2-Down": 1,
-
-      "T3-Up": 1,
-      "T3-Down": 2,
-
-      "T4-Up": 1,
-      "T4-Down": 3,
-
-      "T5-Up": 1,
-      "T5-Down": 4,
-
-      "T6-Up": 1,
-      "T6-Down": 5,
-
-      "T7-Up": 1,
-      "T7-Down": 6,
-
-      "D1": 24,
-      "C1": 0,
-
-      "F1-Hearts": 0,
-      "F1-Diamonds": 0,
-      "F1-Clubs": 0,
-      "F1-Spades": 0
-    },
-
-    "distribution": {
-      "random": true
-    }
-  },
-
-  "stateTypes": {
-    "Initial": {},
-
-    "InPlay": {
-      "predicate": {
-        "not": {
-          "all": [
-            { "equals": ["F1-Hearts.count", 13] },
-            { "equals": ["F1-Diamonds.count", 13] },
-            { "equals": ["F1-Clubs.count", 13] },
-            { "equals": ["F1-Spades.count", 13] }
-          ]
-        }
-      }
-    },
-
-    "Completion": {
-      "predicate": {
-        "all": [
-          { "equals": ["F1-Hearts.count", 13] },
-          { "equals": ["F1-Diamonds.count", 13] },
-          { "equals": ["F1-Clubs.count", 13] },
-          { "equals": ["F1-Spades.count", 13] }
-        ]
-      }
-    }
-  },
-
-  "rules": [
-    {
-      "name": "DrawThree",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.label", "D1"] },
-          { "equals": ["destination.label", "C1"] },
-          { "greaterThanOrEqual": ["source.count", 3] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 3
-        }
-      }
-    },
-
-    {
-      "name": "DrawRemainingCards",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.label", "D1"] },
-          { "equals": ["destination.label", "C1"] },
-          { "greaterThan": ["source.count", 0] },
-          { "lessThan": ["source.count", 3] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": "source.count",
-          "order": "Reverse"
-        }
-      }
-    },
-
-    {
-      "name": "RecycleWaste",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.label", "C1"] },
-          { "equals": ["destination.label", "D1"] },
-          { "equals": ["D1.count", 0] },
-          { "greaterThan": ["C1.count", 0] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": "source.count"
-        }
-      }
-    },
-
-    {
-      "name": "FlipTableauCard",
-      "automatic": true,
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Tableau"] },
-          { "equals": ["source.visibility", "Hidden"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "equals": ["source.column", "destination.column"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "equals": ["destination.count", 0] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    },
-
-    {
-      "name": "TableauToEmptyTableau",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Tableau"] },
-          { "equals": ["source.visibility", "Public"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "notEquals": ["source.column", "destination.column"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "equals": ["destination.count", 0] },
-
-          { "greaterThan": ["count", 0] },
-          { "lessThanOrEqual": ["count", "source.count"] },
-
-          { "equals": ["source.cardFromTop(count).rank", 13] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": "count"
-        }
-      }
-    },
-
-    {
-      "name": "TableauToTableau",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Tableau"] },
-          { "equals": ["source.visibility", "Public"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "notEquals": ["source.column", "destination.column"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "greaterThan": ["destination.count", 0] },
-
-          { "greaterThan": ["count", 0] },
-          { "lessThanOrEqual": ["count", "source.count"] },
-
-          {
-            "equals": [
-              "source.cardFromTop(count).rank + 1",
-              "destination.top.rank"
-            ]
-          },
-
-          {
-            "notEquals": [
-              "source.cardFromTop(count).color",
-              "destination.top.color"
-            ]
-          }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": "count"
-        }
-      }
-    },
-
-    {
-      "name": "WasteToEmptyTableau",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Discard"] },
-          { "equals": ["source.visibility", "Public"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "equals": ["destination.count", 0] },
-
-          { "equals": ["source.top.rank", 13] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    },
-
-    {
-      "name": "WasteToTableau",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Discard"] },
-          { "equals": ["source.visibility", "Public"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "greaterThan": ["destination.count", 0] },
-
-          {
-            "equals": [
-              "source.top.rank + 1",
-              "destination.top.rank"
-            ]
-          },
-
-          {
-            "notEquals": [
-              "source.top.color",
-              "destination.top.color"
-            ]
-          }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    },
-
-    {
-      "name": "FoundationToEmptyTableau",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Foundation"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "equals": ["destination.count", 0] },
-
-          { "equals": ["source.top.rank", 13] }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    },
-
-    {
-      "name": "FoundationToTableau",
-
-      "predicate": {
-        "all": [
-          { "equals": ["source.type", "Foundation"] },
-
-          { "equals": ["destination.type", "Tableau"] },
-          { "equals": ["destination.visibility", "Public"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "greaterThan": ["destination.count", 0] },
-
-          {
-            "equals": [
-              "source.top.rank + 1",
-              "destination.top.rank"
-            ]
-          },
-
-          {
-            "notEquals": [
-              "source.top.color",
-              "destination.top.color"
-            ]
-          }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    },
-
-    {
-      "name": "AceToFoundation",
-
-      "predicate": {
-        "all": [
-          {
-            "in": [
-              "source.type",
-              [
-                "Tableau",
-                "Discard"
-              ]
-            ]
-          },
-
-          { "equals": ["source.visibility", "Public"] },
-
-          { "equals": ["destination.type", "Foundation"] },
-          { "equals": ["destination.count", 0] },
-
-          { "greaterThan": ["source.count", 0] },
-
-          { "equals": ["source.top.rank", 1] },
-
-          {
-            "equals": [
-              "source.top.suit",
-              "destination.suit"
-            ]
-          }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    },
-
-    {
-      "name": "BuildFoundation",
-
-      "predicate": {
-        "all": [
-          {
-            "in": [
-              "source.type",
-              [
-                "Tableau",
-                "Discard"
-              ]
-            ]
-          },
-
-          { "equals": ["source.visibility", "Public"] },
-
-          { "equals": ["destination.type", "Foundation"] },
-
-          { "greaterThan": ["source.count", 0] },
-          { "greaterThan": ["destination.count", 0] },
-
-          {
-            "equals": [
-              "source.top.suit",
-              "destination.suit"
-            ]
-          },
-
-          {
-            "equals": [
-              "source.top.rank",
-              "destination.top.rank + 1"
-            ]
-          }
-        ]
-      },
-
-      "action": {
-        "zoneTransfer": {
-          "source": "source",
-          "destination": "destination",
-          "count": 1
-        }
-      }
-    }
-  ],
-
-  "turn": {
-    "actor": 1,
-    "minimumActions": 1,
-    "maximumActions": null
-  },
-
-  "ruleEvaluation": {
-    "default": "Deny",
-    "applicableRules": "Derived"
+    "zones": [
+      { "label": "T1-Up", "count": 1 },
+      { "label": "T1-Down", "count": 0 },
+      { "label": "T2-Up", "count": 1 },
+      { "label": "T2-Down", "count": 1 },
+      { "label": "T3-Up", "count": 1 },
+      { "label": "T3-Down", "count": 2 },
+      { "label": "T4-Up", "count": 1 },
+      { "label": "T4-Down", "count": 3 },
+      { "label": "T5-Up", "count": 1 },
+      { "label": "T5-Down", "count": 4 },
+      { "label": "T6-Up", "count": 1 },
+      { "label": "T6-Down", "count": 5 },
+      { "label": "T7-Up", "count": 1 },
+      { "label": "T7-Down", "count": 6 },
+      { "label": "D1", "count": 24 },
+      { "label": "C1", "count": 0 },
+      { "label": "F1-Hearts", "count": 0 },
+      { "label": "F1-Diamonds", "count": 0 },
+      { "label": "F1-Clubs", "count": 0 },
+      { "label": "F1-Spades", "count": 0 }
+    ],
+    "distribution": "Random"
   }
 }

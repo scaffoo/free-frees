@@ -1,4 +1,4 @@
-import type { Card, DeclarativeGameDefinition, GameRule, LegalMove, Player, RoomView } from "@free-frees/shared";
+import type { Card, CardPlacement, CardSelection, DeclarativeGameDefinition, GameRule, LegalMove, Player, RoomView } from "@free-frees/shared";
 import { shuffle } from "../cards.js";
 import type { EngineRoom, GenericCardGameState, GenericZoneState, RuntimeGame } from "./types.js";
 
@@ -131,18 +131,37 @@ function evalPredicate(predicate: unknown, state: GenericCardGameState, ctx: Con
   return false;
 }
 
-function transfer(state: GenericCardGameState, sourceLabel: string, destinationLabel: string, count: number, order: "Preserve" | "Reverse" = "Preserve") {
+function selectionCount(selection: CardSelection, state: GenericCardGameState, ctx: Context) {
+  if ("top" in selection) return Number(resolveValue(selection.top, state, ctx));
+  if ("bottom" in selection) return Number(resolveValue(selection.bottom, state, ctx));
+  if ("index" in selection) return 1;
+  if ("range" in selection) return Number(resolveValue(selection.range[1], state, ctx)) - Number(resolveValue(selection.range[0], state, ctx)) + 1;
+  return 0;
+}
+
+function selectionOrder(selection: CardSelection) {
+  return "order" in selection ? selection.order : "Preserve";
+}
+
+function transfer(state: GenericCardGameState, sourceLabel: string, destinationLabel: string, selection: CardSelection, placement: CardPlacement, ctx: Context) {
   const source = state.zones[sourceLabel];
   const destination = state.zones[destinationLabel];
+  const count = selectionCount(selection, state, ctx);
   if (!source || !destination || count < 1 || source.cards.length < count) throw new Error("Illegal transfer");
-  const moving = source.cards.splice(source.cards.length - count, count);
-  if (order === "Reverse") moving.reverse();
-  destination.cards.push(...moving);
+  let start = source.cards.length - count;
+  if ("bottom" in selection) start = 0;
+  if ("index" in selection) start = Number(resolveValue(selection.index, state, ctx));
+  if ("range" in selection) start = Number(resolveValue(selection.range[0], state, ctx));
+  const moving = source.cards.splice(start, count);
+  if (selectionOrder(selection) === "Reverse") moving.reverse();
+  if (placement === "Bottom") destination.cards.unshift(...moving);
+  else if (typeof placement === "object" && "index" in placement) destination.cards.splice(Number(resolveValue(placement.index, state, ctx)), 0, ...moving);
+  else destination.cards.push(...moving);
 }
 
 function actionCount(rule: GameRule, state: GenericCardGameState, ctx: Context) {
   if (!("zoneTransfer" in rule.action)) return 0;
-  return Number(resolveValue(rule.action.zoneTransfer.count, state, ctx));
+  return selectionCount(rule.action.zoneTransfer.selection, state, ctx);
 }
 
 function ruleMove(rule: GameRule, source: GenericZoneState, destination: GenericZoneState, count: number): LegalMove {
@@ -150,7 +169,7 @@ function ruleMove(rule: GameRule, source: GenericZoneState, destination: Generic
     id: `zt|${rule.name}|${source.label}|${destination.label}|${count}`,
     type: "zoneTransfer",
     label: `${rule.name}: ${source.label} -> ${destination.label}`,
-    payload: { from: source.label, to: destination.label, count, rule: rule.name }
+    payload: { from: source.label, to: destination.label, count, selection: { top: count }, placement: "Top", rule: rule.name }
   };
 }
 
@@ -272,7 +291,8 @@ function applyZoneMove(definition: DeclarativeGameDefinition, state: GenericCard
   const payload = move.payload as { from: string; to: string; count: number; rule: string };
   const rule = definition.rules.find((candidate) => candidate.name === payload.rule);
   if (!rule || !("zoneTransfer" in rule.action)) throw new Error("Illegal move");
-  transfer(state, payload.from, payload.to, payload.count, rule.action.zoneTransfer.order);
+  const ctx = { source: state.zones[payload.from], destination: state.zones[payload.to], count: payload.count, actor: state.actor };
+  transfer(state, payload.from, payload.to, rule.action.zoneTransfer.selection, rule.action.zoneTransfer.placement, ctx);
   runEffects(definition, state, rule, payload);
   runAutomaticRules(definition, state);
   evaluateCompletion(definition, state);

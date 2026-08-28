@@ -97,11 +97,26 @@ export const gameZoneDefinitionSchema = z.object({
 });
 export type GameZoneDefinition = z.infer<typeof gameZoneDefinitionSchema>;
 
+export const cardSelectionSchema = z.union([
+  z.object({ top: z.union([z.number().int().positive(), z.string()]), order: z.enum(["Preserve", "Reverse"]).default("Preserve") }),
+  z.object({ bottom: z.union([z.number().int().positive(), z.string()]), order: z.enum(["Preserve", "Reverse"]).default("Preserve") }),
+  z.object({ index: z.union([z.number().int().nonnegative(), z.string()]) }),
+  z.object({ range: z.tuple([z.union([z.number().int().nonnegative(), z.string()]), z.union([z.number().int().nonnegative(), z.string()])]) })
+]);
+export type CardSelection = z.infer<typeof cardSelectionSchema>;
+
+export const cardPlacementSchema = z.union([
+  z.literal("Top"),
+  z.literal("Bottom"),
+  z.object({ index: z.union([z.number().int().nonnegative(), z.string()]) })
+]);
+export type CardPlacement = z.infer<typeof cardPlacementSchema>;
+
 export const zoneTransferActionSchema = z.object({
   source: z.string(),
   destination: z.string(),
-  count: z.union([z.number().int().positive(), z.string()]),
-  order: z.enum(["Preserve", "Reverse"]).default("Preserve")
+  selection: cardSelectionSchema,
+  placement: cardPlacementSchema.default("Top")
 });
 
 export const communicateActionSchema = z.object({
@@ -146,10 +161,6 @@ export const gameDefinitionSchema = z.object({
     values: z.array(gameCardValueSchema)
   }),
   zones: z.array(gameZoneDefinitionSchema),
-  actions: z.object({
-    zoneTransfer: z.object({ parameters: z.array(z.string()), semantics: z.record(jsonValueSchema).default({}) }),
-    communicate: z.object({ parameters: z.array(z.string()), semantics: z.record(jsonValueSchema).default({}) })
-  }),
   initialState: z.object({
     stateType: z.string(),
     variables: z.record(jsonValueSchema).default({}),

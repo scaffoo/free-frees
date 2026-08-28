@@ -1,5 +1,12 @@
 GENERIC TRADITIONAL CARD GAME MODEL
 
+Formal grammar:
+  See card-game.ebnf in this directory.
+
+This file describes the conceptual model. The EBNF file is the formal language
+reference and should be treated as the source of truth when this prose is
+ambiguous.
+
 The engine is intended to support traditional playing-card games entirely from data definitions. A game definition should not contain executable game-specific code. The engine evaluates the game definition, current Game State, and Rules to determine which Actions are permitted.
 
 The fundamental principle is DENY BY DEFAULT:
