@@ -43,24 +43,24 @@
         "name": "AskForRank",
         "type": "Communicate",
         "initiator": "Player",
-        "message": "Do you have any {value}?",
-        "predicate": "GameState.Actor.hand.count > 0 and Action.target != GameState.Actor and Action.value in GameState.Actor.hand.ranks",
+        "message": "Do you have any {{GameState.Variables.RequestCard}}?",
+        "predicate": "GameState.Actor.hand.count > 0 and Action.target != GameState.Actor and GameState.Variables.RequestCard in GameState.Actor.hand.ranks",
         "effects": [
           {
             "name": "AnswerYesWithRank",
             "type": "Communicate",
             "initiator": "Trigger",
-            "predicate": "Action.value in Action.target.hand.ranks",
-            "message": "Yes, I have {value}.",
+            "predicate": "GameState.Variables.RequestCard in Action.target.hand.ranks",
+            "message": "Yes, I have {GameState.Variables.RequestCard}.",
             "effects": [
               {
                 "name": "TransferRequestedRank",
                 "type": "ZoneTransfer",
                 "initiator": "Trigger",
-                "predicate": "Action.value in Action.target.hand.ranks",
+                "predicate": "GameState.Variables.RequestCard in Action.target.hand.ranks",
                 "source": "Action.target.hand",
                 "destination": "GameState.Actor.hand",
-                "selection": "Where(card.rank = Action.value)",
+                "selection": "Where(card.rank = GameState.Variables.RequestCard)",
                 "placement": "Top"
               }
             ]
@@ -69,7 +69,7 @@
             "name": "AnswerNoWithRank",
             "type": "Communicate",
             "initiator": "Trigger",
-            "predicate": "not Action.value in Action.target.hand.ranks",
+            "predicate": "not GameState.Variables.RequestCard in Action.target.hand.ranks",
             "message": "Go fish.",
             "effects": [
               {
@@ -99,7 +99,8 @@
     },
     "stateType": "Initial",
     "variables": {
-      "phase": "Ask"
+      "phase": "Ask",
+      "RequestCard": null
     },
     "zones": [
       { "label": "P1-Hand", "count": 7 },

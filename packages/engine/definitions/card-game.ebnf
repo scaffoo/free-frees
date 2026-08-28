@@ -129,7 +129,7 @@ ActionNameField     = '"name"', ":", Identifier ;
 ActionTypeField     = '"type"', ":", ActionType ;
 ActionInitiatorField = '"initiator"', ":", ActionInitiator ;
 ActionPredicateField = '"predicate"', ":", Expression ;
-ActionMessageField  = '"message"', ":", String ;
+ActionMessageField  = '"message"', ":", MessageString ;
 ActionSourceField   = '"source"', ":", Expression ;
 ActionDestinationField = '"destination"', ":", Expression ;
 ActionSelectionField = '"selection"', ":", Expression ;
@@ -276,7 +276,6 @@ ActionMember        = "name" |
                       "target" |
                       "selection" |
                       "placement" |
-                      "value" |
                       "count" |
                       "message" ;
 
@@ -339,6 +338,12 @@ PlayerRef           = "P", Integer ;
 Literal             = String | Integer | Boolean | Null | Identifier ;
 Boolean             = "true" | "false" ;
 Null                = "null" ;
+
+MessageString       = '"', { MessageText | OutputInterpolation | InputInterpolation }, '"' ;
+OutputInterpolation = "{", Expression, "}" ;
+InputInterpolation  = "{{", AssignableExpression, "}}" ;
+AssignableExpression = "GameState", ".", "Variables", ".", VariableName ;
+MessageText         = ? any character except " or { ? ;
 
 Identifier          = Letter, { Letter | Digit | "_" | "-" } ;
 String              = '"', { ? any character except " ? }, '"' ;
