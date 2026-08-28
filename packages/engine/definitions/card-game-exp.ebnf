@@ -11,15 +11,13 @@
    placement.
 *)
 
-Expression          = BooleanExpression ;
-BooleanExpression   = OrExpression ;
+Expression          = OrExpression ;
 OrExpression        = AndExpression, { "or", AndExpression } ;
 AndExpression       = NotExpression, { "and", NotExpression } ;
 NotExpression       = [ "not" ], ComparisonExpression ;
 ComparisonExpression = MembershipExpression, [ CompareOp, MembershipExpression ] ;
 CompareOp           = "=" | "!=" | ">" | ">=" | "<" | "<=" ;
-MembershipExpression = ArithmeticExpression, [ "in", SetExpression ] ;
-ArithmeticExpression = AdditiveExpression ;
+MembershipExpression = AdditiveExpression, [ "in", SetExpression ] ;
 AdditiveExpression  = MultiplicativeExpression, { ("+" | "-"), MultiplicativeExpression } ;
 MultiplicativeExpression = UnaryExpression, { ("*" | "/"), UnaryExpression } ;
 UnaryExpression     = [ "-" ], PrimaryExpression ;
@@ -49,27 +47,11 @@ TopSelection        = "Top", "(", Expression, ")" ;
 BottomSelection     = "Bottom", "(", Expression, ")" ;
 IndexSelection      = "Index", "(", Expression, ")" ;
 RangeSelection      = "Range", "(", Expression, ",", Expression, ")" ;
-WhereSelection      = "Where", "(", CardExpression, ")" ;
+WhereSelection      = "Where", "(", Expression, ")" ;
 
 PlacementExpression = "Top" |
                       "Bottom" |
                       "Index", "(", Expression, ")" ;
-
-(*
-   CardExpression is selection-local. The root symbol "card" is the candidate
-   card from the source zone. The root symbol "source" is the source zone.
-   Parameter references are allowed only when bound by the containing action.
-*)
-CardExpression      = CardOrExpression ;
-CardOrExpression    = CardAndExpression, { "or", CardAndExpression } ;
-CardAndExpression   = CardNotExpression, { "and", CardNotExpression } ;
-CardNotExpression   = [ "not" ], CardComparisonExpression ;
-CardComparisonExpression = CardPrimaryExpression, [ CompareOp, CardPrimaryExpression ] ;
-CardPrimaryExpression = CardPathExpression |
-                      Literal |
-                      ParameterRef |
-                      FunctionCall |
-                      "(", CardExpression, ")" ;
 
 SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
                       PathExpression |
@@ -77,7 +59,6 @@ SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
 
 FunctionCall        = Identifier, "(", [ Expression, { ",", Expression } ], ")" ;
 PathExpression      = PathRoot, ".", Identifier, { ".", Identifier } ;
-CardPathExpression  = CardPathRoot, ".", Identifier, { ".", Identifier } ;
 
 PathRoot            = "GameSetup" |
                       "GameState" |
@@ -86,12 +67,10 @@ PathRoot            = "GameSetup" |
                       "Target" |
                       ZoneRef |
                       PlayerRef ;
-CardPathRoot        = "card" | "source" | ParameterRef ;
 
 PlayerExpr          = "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
 
 Binding             = Identifier ;
-ParameterRef        = "$", Identifier ;
 ZoneRef             = Identifier ;
 PlayerRef           = "P", Integer ;
 
