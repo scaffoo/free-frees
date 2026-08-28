@@ -23,6 +23,7 @@ MultiplicativeExpression = UnaryExpression, { ("*" | "/"), UnaryExpression } ;
 UnaryExpression     = [ "-" ], PrimaryExpression ;
 
 PrimaryExpression   = Literal |
+                      BindingRef |
                       PathExpression |
                       FunctionCall |
                       SelectionExpression |
@@ -58,15 +59,62 @@ SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
                       FunctionCall ;
 
 FunctionCall        = Identifier, "(", [ Expression, { ",", Expression } ], ")" ;
-PathExpression      = PathRoot, ".", Identifier, { ".", Identifier } ;
 
-PathRoot            = "GameSetup" |
+(*
+   Bindings are named values supplied by the evaluator for the expression's
+   context. Actor is the player whose turn it is. Target is the other player or
+   recipient chosen by the current action. source, destination, selection,
+   placement, value, and count are current action fields when that action type
+   provides them. card is available inside Where(...) as the candidate card.
+*)
+BindingRef          = BuiltInBinding |
+                      PlayerRef |
+                      ZoneRef ;
+BuiltInBinding      = "GameSetup" |
                       "GameState" |
                       "Action" |
                       "Actor" |
                       "Target" |
-                      ZoneRef |
+                      "source" |
+                      "destination" |
+                      "selection" |
+                      "placement" |
+                      "value" |
+                      "count" |
+                      "card" ;
+
+PathExpression      = GamePath |
+                      ActionPath |
+                      PlayerPath |
+                      ZonePath |
+                      CardPath ;
+PathSegment         = Identifier |
+                      FunctionCall ;
+
+GamePath            = ("GameSetup" | "GameState"), ".", PathSegment, { ".", PathSegment } ;
+ActionPath          = "Action", ".", PathSegment, { ".", PathSegment } ;
+
+(*
+   Player paths provide convenience access to common player-related zones.
+   Actor.hand means the Hand zone whose player field is Actor. Target.hand
+   means the Hand zone whose player field is Target. The same convention applies
+   to books and zones.
+*)
+PlayerPath          = PlayerRoot, ".", PlayerMember, { ".", PathSegment } ;
+PlayerRoot          = "Actor" |
+                      "Target" |
                       PlayerRef ;
+PlayerMember        = "hand" |
+                      "books" |
+                      "zones" |
+                      Identifier ;
+
+ZonePath            = ZoneRoot, ".", PathSegment, { ".", PathSegment } ;
+ZoneRoot            = "source" |
+                      "destination" |
+                      ZoneRef ;
+
+CardPath            = "card", ".", PathSegment, { ".", PathSegment } ;
 
 PlayerExpr          = "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
 
