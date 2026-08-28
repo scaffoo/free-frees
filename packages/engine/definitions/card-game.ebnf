@@ -2,10 +2,6 @@
    Generic Traditional Card Game Definition Language, draft 0.1.
    This grammar describes the abstract language. JSON is one serialization of
    this grammar; it is not the language itself.
-
-   External grammar dependency:
-     card-game-exp.ebnf defines Expression, PlayerExpr, ZoneRef, Identifier,
-     String, Integer, Literal.
 *)
 
 GameDefinition      = "{",
@@ -152,3 +148,207 @@ ActionType          = "ZoneTransfer" | "Communicate" | Identifier ;
 Effects             = '"effects"', ":", "[", [ Action, { ",", Action } ], "]" ;
 
 Completion          = "completion", "{", Expression, "}" ;
+
+(*
+   Expression is the root syntax type. Field-specific meaning is checked by the
+   evaluator/type layer: a predicate field expects an expression that evaluates
+   to Boolean, a selection field expects an expression that evaluates to a card
+   selection, and a placement field expects an expression that evaluates to a
+   placement.
+*)
+
+Expression          = OrExpression ;
+OrExpression        = AndExpression, { "or", AndExpression } ;
+AndExpression       = NotExpression, { "and", NotExpression } ;
+NotExpression       = [ "not" ], ComparisonExpression ;
+ComparisonExpression = MembershipExpression, [ CompareOp, MembershipExpression ] ;
+CompareOp           = "=" | "!=" | ">" | ">=" | "<" | "<=" ;
+MembershipExpression = AdditiveExpression, [ "in", SetExpression ] ;
+AdditiveExpression  = MultiplicativeExpression, { ("+" | "-"), MultiplicativeExpression } ;
+MultiplicativeExpression = UnaryExpression, { ("*" | "/"), UnaryExpression } ;
+UnaryExpression     = [ "-" ], PrimaryExpression ;
+
+PrimaryExpression   = Literal |
+                      BindingRef |
+                      PathExpression |
+                      ZoneRoot |
+                      BuiltInFunctionCall |
+                      SelectionExpression |
+                      PlacementExpression |
+                      ExistsExpression |
+                      "(", Expression, ")" ;
+
+ExistsExpression    = "exists", Binding, "in", SetExpression, "where", Expression ;
+
+(*
+   Selection expressions are source-local.
+   They may inspect only cards in the source zone and source-zone/card
+   attributes. They must not inspect arbitrary game state, other zones, actor,
+   turn phase, or variables except values explicitly bound as action parameters.
+*)
+SelectionExpression = TopSelection |
+                      BottomSelection |
+                      IndexSelection |
+                      RangeSelection |
+                      WhereSelection ;
+TopSelection        = "Top", "(", Expression, ")" ;
+BottomSelection     = "Bottom", "(", Expression, ")" ;
+IndexSelection      = "Index", "(", Expression, ")" ;
+RangeSelection      = "Range", "(", Expression, ",", Expression, ")" ;
+WhereSelection      = "Where", "(", Expression, ")" ;
+
+PlacementExpression = "Top" |
+                      "Bottom" |
+                      "Index", "(", Expression, ")" ;
+
+SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
+                      PathExpression |
+                      BuiltInFunctionCall ;
+
+(*
+   Bindings are named values supplied by the evaluator for the expression's
+   context. GameSetup, GameState, and Action are the root runtime objects.
+   card is available inside Where(...) as the candidate card.
+*)
+BindingRef          = BuiltInBinding |
+                      PlayerRef ;
+BuiltInBinding      = "GameSetup" |
+                      "GameState" |
+                      "Action" |
+                      "card" ;
+
+PathExpression      = GamePath |
+                      ActionPath |
+                      PlayerPath |
+                      ZonePath |
+                      CardPath ;
+
+GamePath            = GameSetupPath |
+                      GameStatePath ;
+GameSetupPath       = "GameSetup", ".", GameSetupMember ;
+GameSetupMember     = "Players" |
+                      "Players", ".", CollectionMember |
+                      "Players", Indexer, ".", PlayerDefinitionMember |
+                      "Cards" |
+                      "Cards", ".", CardSetupMember |
+                      "ZoneDefinitions" |
+                      "ZoneDefinitions", ".", CollectionMember |
+                      "ZoneDefinitions", Indexer, ".", ZoneDefinitionMember |
+                      "Actions" |
+                      "Actions", ".", CollectionMember |
+                      "Completion" ;
+CardSetupMember     = "decks" |
+                      "suits" |
+                      "values" |
+                      "suits", ".", CollectionMember |
+                      "values", ".", CollectionMember ;
+PlayerDefinitionMember = "id" |
+                      "type" ;
+ZoneDefinitionMember = "label" |
+                      "type" |
+                      "visibility" |
+                      "player" |
+                      "attributes", ".", AttributeName ;
+GameStatePath       = "GameState", ".", GameStateMember ;
+GameStateMember     = "Turn" |
+                      "Turn", ".", TurnMember |
+                      "Actor" |
+                      "StateType" |
+                      "Variables" |
+                      "Variables", ".", VariableName |
+                      "Zones" |
+                      "Zones", ".", CollectionMember |
+                      "Zones", Indexer, ".", ZoneMember ;
+TurnMember          = "actor" |
+                      "minimumActions" |
+                      "maximumActions" ;
+CollectionMember    = "count" |
+                      "ranks" |
+                      "suits" |
+                      "values" ;
+
+ActionPath          = "Action", ".", ActionMember ;
+ActionMember        = "name" |
+                      "type" |
+                      "initiator" |
+                      "source" |
+                      "destination" |
+                      "target" |
+                      "selection" |
+                      "placement" |
+                      "value" |
+                      "count" |
+                      "message" ;
+
+(*
+   Player paths provide convenience access to common player-related zones.
+   GameState.Actor.hand means the Hand zone whose player field is
+   GameState.Actor. Action.target.hand means the Hand zone whose player field
+   is Action.target. The same convention applies to books and zones.
+*)
+PlayerPath          = PlayerRoot, ".", PlayerMember, { ".", PlayerPathMember } ;
+PlayerRoot          = "GameState", ".", "Actor" |
+                      "Action", ".", "target" |
+                      PlayerRef ;
+PlayerMember        = "id" |
+                      "type" |
+                      "hand" |
+                      "books" |
+                      "zones" ;
+PlayerPathMember    = ZoneMember |
+                      CollectionMember ;
+
+ZonePath            = ZoneRoot, ".", ZoneMember, { ".", ZonePathMember } ;
+ZoneRoot            = "Action", ".", "source" |
+                      "Action", ".", "destination" |
+                      "GameState", ".", "Zones", Indexer ;
+ZoneMember          = "label" |
+                      "type" |
+                      "visibility" |
+                      "player" |
+                      "count" |
+                      "top" |
+                      "cards" |
+                      "ranks" |
+                      "attributes", ".", AttributeName |
+                      ZoneMethodCall ;
+ZonePathMember      = ZoneMember |
+                      CardMember |
+                      CollectionMember ;
+
+CardPath            = CardRoot, ".", CardMember ;
+CardRoot            = "card" |
+                      "top" ;
+CardMember          = "rank" |
+                      "suit" |
+                      "value" |
+                      "color" ;
+
+ZoneMethodCall      = "cardFromTop", "(", Expression, ")", ".", CardMember ;
+BuiltInFunctionCall = "nextPlayer", "(", Expression, ")" ;
+Indexer             = "[", Expression, "]" ;
+AttributeName       = Identifier ;
+VariableName        = Identifier ;
+
+PlayerExpr          = "GameState", ".", "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
+
+Binding             = Identifier ;
+ZoneRef             = Identifier ;
+PlayerRef           = "P", Integer ;
+
+Literal             = String | Integer | Boolean | Null | Identifier ;
+Boolean             = "true" | "false" ;
+Null                = "null" ;
+
+Identifier          = Letter, { Letter | Digit | "_" | "-" } ;
+String              = '"', { ? any character except " ? }, '"' ;
+Integer             = Digit, { Digit } ;
+Letter              = "A" | "B" | "C" | "D" | "E" | "F" | "G" |
+                      "H" | "I" | "J" | "K" | "L" | "M" | "N" |
+                      "O" | "P" | "Q" | "R" | "S" | "T" | "U" |
+                      "V" | "W" | "X" | "Y" | "Z" |
+                      "a" | "b" | "c" | "d" | "e" | "f" | "g" |
+                      "h" | "i" | "j" | "k" | "l" | "m" | "n" |
+                      "o" | "p" | "q" | "r" | "s" | "t" | "u" |
+                      "v" | "w" | "x" | "y" | "z" ;
+Digit               = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
