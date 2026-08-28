@@ -56,77 +56,77 @@
         "name": "DrawThree",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.label = D1 and destination.label = C1 and source.count >= 3 and count = 3"
+        "predicate": "Action.source.label = D1 and Action.destination.label = C1 and Action.source.count >= 3 and Action.count = 3"
       },
       {
         "name": "DrawRemainingCards",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.label = D1 and destination.label = C1 and source.count > 0 and source.count < 3 and count = source.count"
+        "predicate": "Action.source.label = D1 and Action.destination.label = C1 and Action.source.count > 0 and Action.source.count < 3 and Action.count = Action.source.count"
       },
       {
         "name": "RecycleWaste",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.label = C1 and destination.label = D1 and D1.count = 0 and C1.count > 0 and count = source.count"
+        "predicate": "Action.source.label = C1 and Action.destination.label = D1 and GameState.Zones[\"D1\"].count = 0 and GameState.Zones[\"C1\"].count > 0 and Action.count = Action.source.count"
       },
       {
         "name": "FlipTableauCard",
         "type": "ZoneTransfer",
         "initiator": "Trigger",
-        "predicate": "source.type = Tableau and source.visibility = Hidden and destination.type = Tableau and destination.visibility = Public and source.attributes.column = destination.attributes.column and source.count > 0 and destination.count = 0"
+        "predicate": "Action.source.type = Tableau and Action.source.visibility = Hidden and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.attributes.column = Action.destination.attributes.column and Action.source.count > 0 and Action.destination.count = 0"
       },
       {
         "name": "TableauToEmptyTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.attributes.column != destination.attributes.column and source.count > 0 and destination.count = 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank = 13"
+        "predicate": "Action.source.type = Tableau and Action.source.visibility = Public and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.attributes.column != Action.destination.attributes.column and Action.source.count > 0 and Action.destination.count = 0 and Action.count > 0 and Action.count <= Action.source.count and Action.source.cardFromTop(Action.count).rank = 13"
       },
       {
         "name": "TableauToTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Tableau and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.attributes.column != destination.attributes.column and source.count > 0 and destination.count > 0 and count > 0 and count <= source.count and source.cardFromTop(count).rank + 1 = destination.top.rank and source.cardFromTop(count).color != destination.top.color"
+        "predicate": "Action.source.type = Tableau and Action.source.visibility = Public and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.attributes.column != Action.destination.attributes.column and Action.source.count > 0 and Action.destination.count > 0 and Action.count > 0 and Action.count <= Action.source.count and Action.source.cardFromTop(Action.count).rank + 1 = Action.destination.top.rank and Action.source.cardFromTop(Action.count).color != Action.destination.top.color"
       },
       {
         "name": "WasteToEmptyTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Discard and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count = 0 and source.top.rank = 13 and count = 1"
+        "predicate": "Action.source.type = Discard and Action.source.visibility = Public and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.count > 0 and Action.destination.count = 0 and Action.source.top.rank = 13 and Action.count = 1"
       },
       {
         "name": "WasteToTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Discard and source.visibility = Public and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count > 0 and source.top.rank + 1 = destination.top.rank and source.top.color != destination.top.color and count = 1"
+        "predicate": "Action.source.type = Discard and Action.source.visibility = Public and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.count > 0 and Action.destination.count > 0 and Action.source.top.rank + 1 = Action.destination.top.rank and Action.source.top.color != Action.destination.top.color and Action.count = 1"
       },
       {
         "name": "FoundationToEmptyTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Foundation and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count = 0 and source.top.rank = 13 and count = 1"
+        "predicate": "Action.source.type = Foundation and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.count > 0 and Action.destination.count = 0 and Action.source.top.rank = 13 and Action.count = 1"
       },
       {
         "name": "FoundationToTableau",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type = Foundation and destination.type = Tableau and destination.visibility = Public and source.count > 0 and destination.count > 0 and source.top.rank + 1 = destination.top.rank and source.top.color != destination.top.color and count = 1"
+        "predicate": "Action.source.type = Foundation and Action.destination.type = Tableau and Action.destination.visibility = Public and Action.source.count > 0 and Action.destination.count > 0 and Action.source.top.rank + 1 = Action.destination.top.rank and Action.source.top.color != Action.destination.top.color and Action.count = 1"
       },
       {
         "name": "AceToFoundation",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and destination.count = 0 and source.count > 0 and source.top.rank = 1 and source.top.suit = destination.attributes.suit and count = 1"
+        "predicate": "Action.source.type in [Tableau, Discard] and Action.source.visibility = Public and Action.destination.type = Foundation and Action.destination.count = 0 and Action.source.count > 0 and Action.source.top.rank = 1 and Action.source.top.suit = Action.destination.attributes.suit and Action.count = 1"
       },
       {
         "name": "BuildFoundation",
         "type": "ZoneTransfer",
         "initiator": "Player",
-        "predicate": "source.type in [Tableau, Discard] and source.visibility = Public and destination.type = Foundation and source.count > 0 and destination.count > 0 and source.top.suit = destination.attributes.suit and source.top.rank = destination.top.rank + 1 and count = 1"
+        "predicate": "Action.source.type in [Tableau, Discard] and Action.source.visibility = Public and Action.destination.type = Foundation and Action.source.count > 0 and Action.destination.count > 0 and Action.source.top.suit = Action.destination.attributes.suit and Action.source.top.rank = Action.destination.top.rank + 1 and Action.count = 1"
       }
     ],
     "completion": {
-      "predicate": "F1-Hearts.count = 13 and F1-Diamonds.count = 13 and F1-Clubs.count = 13 and F1-Spades.count = 13"
+      "predicate": "GameState.Zones[\"F1-Hearts\"].count = 13 and GameState.Zones[\"F1-Diamonds\"].count = 13 and GameState.Zones[\"F1-Clubs\"].count = 13 and GameState.Zones[\"F1-Spades\"].count = 13"
     }
   },
   "gameState": {

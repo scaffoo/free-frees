@@ -25,6 +25,7 @@ UnaryExpression     = [ "-" ], PrimaryExpression ;
 PrimaryExpression   = Literal |
                       BindingRef |
                       PathExpression |
+                      ZoneRoot |
                       BuiltInFunctionCall |
                       SelectionExpression |
                       PlacementExpression |
@@ -60,25 +61,14 @@ SetExpression       = "[", [ Expression, { ",", Expression } ], "]" |
 
 (*
    Bindings are named values supplied by the evaluator for the expression's
-   context. Actor is the player whose turn it is. Target is the other player or
-   recipient chosen by the current action. source, destination, selection,
-   placement, value, and count are current action fields when that action type
-   provides them. card is available inside Where(...) as the candidate card.
+   context. GameSetup, GameState, and Action are the root runtime objects.
+   card is available inside Where(...) as the candidate card.
 *)
 BindingRef          = BuiltInBinding |
-                      PlayerRef |
-                      ZoneRef ;
+                      PlayerRef ;
 BuiltInBinding      = "GameSetup" |
                       "GameState" |
                       "Action" |
-                      "Actor" |
-                      "Target" |
-                      "source" |
-                      "destination" |
-                      "selection" |
-                      "placement" |
-                      "value" |
-                      "count" |
                       "card" ;
 
 PathExpression      = GamePath |
@@ -116,6 +106,7 @@ ZoneDefinitionMember = "label" |
 GameStatePath       = "GameState", ".", GameStateMember ;
 GameStateMember     = "Turn" |
                       "Turn", ".", TurnMember |
+                      "Actor" |
                       "StateType" |
                       "Variables" |
                       "Variables", ".", VariableName |
@@ -136,6 +127,7 @@ ActionMember        = "name" |
                       "initiator" |
                       "source" |
                       "destination" |
+                      "target" |
                       "selection" |
                       "placement" |
                       "value" |
@@ -144,13 +136,13 @@ ActionMember        = "name" |
 
 (*
    Player paths provide convenience access to common player-related zones.
-   Actor.hand means the Hand zone whose player field is Actor. Target.hand
-   means the Hand zone whose player field is Target. The same convention applies
-   to books and zones.
+   GameState.Actor.hand means the Hand zone whose player field is
+   GameState.Actor. Action.target.hand means the Hand zone whose player field
+   is Action.target. The same convention applies to books and zones.
 *)
 PlayerPath          = PlayerRoot, ".", PlayerMember, { ".", PlayerPathMember } ;
-PlayerRoot          = "Actor" |
-                      "Target" |
+PlayerRoot          = "GameState", ".", "Actor" |
+                      "Action", ".", "target" |
                       PlayerRef ;
 PlayerMember        = "id" |
                       "type" |
@@ -161,9 +153,9 @@ PlayerPathMember    = ZoneMember |
                       CollectionMember ;
 
 ZonePath            = ZoneRoot, ".", ZoneMember, { ".", ZonePathMember } ;
-ZoneRoot            = "source" |
-                      "destination" |
-                      ZoneRef ;
+ZoneRoot            = "Action", ".", "source" |
+                      "Action", ".", "destination" |
+                      "GameState", ".", "Zones", Indexer ;
 ZoneMember          = "label" |
                       "type" |
                       "visibility" |
@@ -192,7 +184,7 @@ Indexer             = "[", Expression, "]" ;
 AttributeName       = Identifier ;
 VariableName        = Identifier ;
 
-PlayerExpr          = "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
+PlayerExpr          = "GameState", ".", "Actor" | PlayerRef | "Null" | "nextPlayer", "(", PlayerExpr, ")" ;
 
 Binding             = Identifier ;
 ZoneRef             = Identifier ;

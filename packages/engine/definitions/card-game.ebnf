@@ -29,17 +29,15 @@ GameSetup           = "gameSetup", "{",
                       "}" ;
 
 Players             = '"players"', ":", "[", PlayerDefinition, { ",", PlayerDefinition }, "]" ;
-PlayerDefinition    = "{", '"id"', ":", PlayerId, ",", '"type"', ":", PlayerType, "}" ;
+PlayerDefinition    = "{", '"id"', ":", Integer, ",", '"type"', ":", PlayerType, "}" ;
 PlayerType          = "Human" | "Bot" | "Null" ;
-PlayerId            = Integer ;
 
 Cards               = "cards", "{",
                       "decks", Integer,
                       "suits", "=", SuitSet,
                       "values", "=", ValueSet,
                       "}" ;
-SuitSet             = "[", Suit, { ",", Suit }, "]" ;
-Suit                = Identifier ;
+SuitSet             = "[", Identifier, { ",", Identifier }, "]" ;
 ValueSet            = "[", CardValue, { ",", CardValue }, "]" ;
 CardValue           = "{", "name", String, "value", Integer, "rank", Integer, "}" ;
 
@@ -65,16 +63,15 @@ CardValue           = "{", "name", String, "value", Integer, "rank", Integer, "}
 *)
 ZoneDefinitions     = '"zoneDefinitions"', ":", "[", ZoneDefinition, { ",", ZoneDefinition }, "]" ;
 ZoneDefinition      = "{",
-                      '"label"', ":", ZoneLabel, ",",
+                      '"label"', ":", Identifier, ",",
                       '"type"', ":", ZoneType, ",",
                       '"visibility"', ":", ZoneVisibility,
                       (*
                          Optional owning player for player-specific zones.
                       *)
-                      [ ",", '"player"', ":", PlayerId ],
+                      [ ",", '"player"', ":", Integer ],
                       [ ",", '"attributes"', ":", "{", AttributeSet, "}" ],
                       "}" ;
-ZoneLabel           = Identifier ;
 ZoneType            = "Draw" |
                       "Discard" |
                       "Hand" |
@@ -114,8 +111,7 @@ ZoneState           = ZoneRef, "{",
                       [ "count", "=", Integer ],
                       [ "attributes", "=", AttributeSet ],
                       "}" ;
-CardList            = "[", [ CardRef, { ",", CardRef } ], "]" ;
-CardRef             = Identifier ;
+CardList            = "[", [ Identifier, { ",", Identifier } ], "]" ;
 Distribution        = "Random" | "Ordered" ;
 
 Actions             = '"actions"', ":", "[", Action, { ",", Action }, "]" ;
@@ -153,7 +149,6 @@ ActionType          = "ZoneTransfer" | "Communicate" | Identifier ;
    represented by effect predicates rather than by a separate effect-level
    logical operator.
 *)
-Effects             = '"effects"', ":", "[", [ Effect, { ",", Effect } ], "]" ;
-Effect              = Action ;
+Effects             = '"effects"', ":", "[", [ Action, { ",", Action } ], "]" ;
 
 Completion          = "completion", "{", Expression, "}" ;

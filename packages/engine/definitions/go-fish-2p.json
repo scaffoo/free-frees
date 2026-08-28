@@ -44,23 +44,23 @@
         "type": "Communicate",
         "initiator": "Player",
         "message": "Do you have any {value}?",
-        "predicate": "Actor.hand.count > 0 and Target != Actor and value in Actor.hand.ranks",
+        "predicate": "GameState.Actor.hand.count > 0 and Action.target != GameState.Actor and Action.value in GameState.Actor.hand.ranks",
         "effects": [
           {
             "name": "AnswerYesWithRank",
             "type": "Communicate",
             "initiator": "Trigger",
-            "predicate": "value in Target.hand.ranks",
+            "predicate": "Action.value in Action.target.hand.ranks",
             "message": "Yes, I have {value}.",
             "effects": [
               {
                 "name": "TransferRequestedRank",
                 "type": "ZoneTransfer",
                 "initiator": "Trigger",
-                "predicate": "value in Target.hand.ranks",
-                "source": "Target.hand",
-                "destination": "Actor.hand",
-                "selection": "Where(card.rank = value)",
+                "predicate": "Action.value in Action.target.hand.ranks",
+                "source": "Action.target.hand",
+                "destination": "GameState.Actor.hand",
+                "selection": "Where(card.rank = Action.value)",
                 "placement": "Top"
               }
             ]
@@ -69,16 +69,16 @@
             "name": "AnswerNoWithRank",
             "type": "Communicate",
             "initiator": "Trigger",
-            "predicate": "not value in Target.hand.ranks",
+            "predicate": "not Action.value in Action.target.hand.ranks",
             "message": "Go fish.",
             "effects": [
               {
                 "name": "DrawFromStock",
                 "type": "ZoneTransfer",
                 "initiator": "Trigger",
-                "predicate": "D1.count > 0",
-                "source": "D1",
-                "destination": "Actor.hand",
+                "predicate": "GameState.Zones[\"D1\"].count > 0",
+                "source": "GameState.Zones[\"D1\"]",
+                "destination": "GameState.Actor.hand",
                 "selection": "Top(1)",
                 "placement": "Top"
               }
@@ -88,7 +88,7 @@
       }
     ],
     "completion": {
-      "predicate": "(P1-Books.count + P2-Books.count = 52) or (D1.count = 0 and P1-Hand.count = 0 and P2-Hand.count = 0)"
+      "predicate": "(GameState.Zones[\"P1-Books\"].count + GameState.Zones[\"P2-Books\"].count = 52) or (GameState.Zones[\"D1\"].count = 0 and GameState.Zones[\"P1-Hand\"].count = 0 and GameState.Zones[\"P2-Hand\"].count = 0)"
     }
   },
   "gameState": {
